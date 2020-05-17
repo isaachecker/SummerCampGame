@@ -3,21 +3,22 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public class Room : MonoBehaviour
+public class Room
 {
+    public enum Type
+    {
+        Cabin,
+        ShowerHouse
+    }
+
     private BoundsInt bounds;
     private Vector3Int doorPos;
 
     private List<RoomObject> objectList;
 
-    public void Initialize(BoundsInt _bounds)
+    public Room(BoundsInt _bounds)
     {
         bounds = _bounds;
-    }
-
-    // Start is called before the first frame update
-    void Start()
-    {
         objectList = new List<RoomObject>();
     }
 
@@ -29,10 +30,5 @@ public class Room : MonoBehaviour
     public BoundsInt GetBounds()
     {
         return bounds;
-    }
-
-    public void OnDestroy()
-    {
-        //Destroy inside objects
     }
 }

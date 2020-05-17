@@ -52,32 +52,34 @@ public class RoomEditor : MonoBehaviour
     public RuleTile roomRuleTilePrefab;
     public Tile doorTilePrefab;
     public Tilemap tilemapPrefab;
-    public Room roomPrefab;
     public TileBase BlockTile;
 
     private Tilemap _tilemapInst, tilemapColl;
     private Vector3Int clickPos, curMousePos, lastMousePos;
     private Grid grid;
     private BoundsInt curBounds;
-    private List<BoundsInt> bounds;
     private RuleTile[] tileArray;
     private Room room;
+    private List<Room> rooms;
     private SimplePathFinding2D PF2D;
+    private RoomManager roomMan;
 
     // Start is called before the first frame update
     void Start()
     {
         grid = GameObject.Find("Grid").GetComponent<Grid>();
         tilemapColl = GameObject.Find("TilemapColl").GetComponent<Tilemap>();
+        PF2D = grid.GetComponent<SimplePathFinding2D>();
+        roomMan = GameObject.Find("RoomManager").GetComponent<RoomManager>();
+
         state = State.None;
-        bounds = new List<BoundsInt>();
+        rooms = new List<Room>();
 
         tileArray = new RuleTile[1000];
         for (int index = 0; index < tileArray.Length; index++)
         {
             tileArray[index] = roomRuleTilePrefab;
         }
-        PF2D = grid.GetComponent<SimplePathFinding2D>();
     }
 
     // Update is called once per frame
@@ -135,19 +137,13 @@ public class RoomEditor : MonoBehaviour
 
         curBounds = GetCurrentBounds();
 
-        Debug.Log(curBounds.ToString());
         _tilemapInst.SetTilesBlock(curBounds, tileArray);
     }
 
     void EndBuildRoom()
     {
-        if (curBounds.size != Vector3Int.zero)
-        {
-            bounds.Add(curBounds);
-            SetCollidersOnEdgeOfBound(curBounds);
-            room = Instantiate(roomPrefab);
-            room.Initialize(curBounds);
-        }
+        SetCollidersOnEdgeOfBound(curBounds);
+        room = roomMan.CreateRoom<Cabin>(curBounds);
         clickPos = Vector3Int.zero;
     }
 
@@ -158,16 +154,6 @@ public class RoomEditor : MonoBehaviour
         int yMin = Mathf.Min(clickPos.y, curMousePos.y);
         int yDiff = Mathf.Abs(clickPos.y - curMousePos.y) + 1;
         return new BoundsInt(xMin, yMin, Controls.GetTileZ(), xDiff, yDiff, Controls.GetTileZ());
-    }
-
-    bool BoundsInListEncapsulatesBound(BoundsInt containee)
-    {
-        if (bounds.Count == 0) return false;
-        foreach (BoundsInt container in bounds)
-        {
-            if (BoundsEncapsulatesBounds(container, containee)) return true;
-        }
-        return false;
     }
 
     bool BoundsEncapsulatesBounds(BoundsInt container, BoundsInt containee)
@@ -234,13 +220,6 @@ public class RoomEditor : MonoBehaviour
             }
         }
         PF2D.UpdateNavMesh(bounds);
-    }
-
-    void DestroyRoom(Room _room)
-    {
-        BoundsInt bounds = _room.GetBounds();
-        EraseTilesWithinBounds(bounds);
-        GameObject.Destroy(_room);
     }
 }
 

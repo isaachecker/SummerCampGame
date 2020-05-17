@@ -41,7 +41,7 @@ public class PathFollower : MonoBehaviour
             else
             {
                 Vector2 delta = nextPoint - transform.position;
-                if (delta.magnitude <= .2f && !path.GetNextPoint(ref nextPoint))
+                if (delta.magnitude <= .1f && !path.GetNextPoint(ref nextPoint))
                 {
                     isStationary = true;
                     NormalizePosition();

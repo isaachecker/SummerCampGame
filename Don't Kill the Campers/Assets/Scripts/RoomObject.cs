@@ -4,18 +4,108 @@ using UnityEngine;
 
 public class RoomObject : MonoBehaviour
 {
-    private bool isInteractible;
+    [System.Serializable]
+    protected class InteractionPoint
+    {
+        [SerializeField]
+        Vector3 center;
+        [SerializeField]
+        Vector2 interactionOffsetFromCenter;
+        [SerializeField]
+        Vector2 entryOffsetFromCenter;
+        bool isLocked = false;
+        bool? canBeAccessed;
+
+        public bool Lock()
+        {
+            if (isLocked) return false;
+            isLocked = true;
+            return true;
+        }
+        public bool Unlock()
+        {
+            if (!isLocked) return false;
+            isLocked = false;
+            return true;
+        }
+        public bool IsLocked()
+        {
+            return isLocked;
+        }
+
+        public bool IsAccessible()
+        {
+            if (canBeAccessed == null)
+            {
+                //generate a path to door. If path exists, set canBeAccessed to true
+            }
+            return canBeAccessed == true ? true : false; //for now, so no compiler errors
+        }
+
+        public Vector3 GetEntryPointLocation()
+        {
+            Vector3 pos = center;
+            pos.x += entryOffsetFromCenter.x;
+            pos.y += entryOffsetFromCenter.y;
+            return pos;
+        }
+    }
+    
     [SerializeField]
-    private List<Vector2Int> interactionPointOffsets, interactionPointEntryOffsets;
+    private List<InteractionPoint> interactionPoints;
 
     // Start is called before the first frame update
     void Start()
     {
     }
 
-    public bool IsInteractible()
+    public bool HasOpenInteractionPoint()
     {
-        return isInteractible;
+        foreach (InteractionPoint IP in interactionPoints)
+        {
+            if (!IP.IsLocked()) return true;
+        }
+        return false;
+    }
+
+    public int LockOpenInteractionPoint()
+    {
+        for (int i = 0; i < interactionPoints.Count; i++)
+        {
+            InteractionPoint IP = interactionPoints[i];
+            if (!IP.IsLocked() && IP.Lock())
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public int LockOpenInteractionPoint(ref Vector3 entryPosition)
+    {
+        int i;
+        for (i = 0; i < interactionPoints.Count; i++)
+        {
+            InteractionPoint IP = interactionPoints[i];
+            if (!IP.IsLocked() && IP.Lock())
+            {
+                break;
+            }
+        }
+        entryPosition = GetInteractionPointEntryLocation(i);
+        return i >= 0 ? i : -1;
+    }
+
+    public bool UnlockInteractionPoint(int index)
+    {
+        if (index >= interactionPoints.Count) return false;
+        return interactionPoints[index].Unlock();
+    }
+
+    public Vector3 GetInteractionPointEntryLocation(int index)
+    {
+        if (index >= interactionPoints.Count) return Vector3.zero;
+        return interactionPoints[index].GetEntryPointLocation();
     }
 
     //require an action once a path follower gets to an entry point
