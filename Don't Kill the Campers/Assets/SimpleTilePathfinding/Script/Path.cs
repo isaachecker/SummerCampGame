@@ -22,7 +22,8 @@ namespace SimplePF2D{
         private static bool init = false;
 
         // This needs to be created with a valid SimplePathFinding2D object. Not doing so will cause issues.
-        public Path(SimplePathFinding2D newpf){
+        public Path(SimplePathFinding2D newpf)
+        {
             pf = newpf;
             pathpoints = new List<Vector3Int>();
             aStarSearch = new AStarSearch(pf);

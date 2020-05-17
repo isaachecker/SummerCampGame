@@ -7,18 +7,18 @@ public class Room : MonoBehaviour
 {
     private BoundsInt bounds;
     private Vector3Int doorPos;
-    private Tilemap tilemap;
 
-    public void Initialize(Tilemap _tilemap, BoundsInt _bounds)
+    private List<RoomObject> objectList;
+
+    public void Initialize(BoundsInt _bounds)
     {
-        tilemap = _tilemap;
         bounds = _bounds;
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        
+        objectList = new List<RoomObject>();
     }
 
     public void AddDoor(Vector3Int newDoorPosition)
@@ -26,4 +26,13 @@ public class Room : MonoBehaviour
         doorPos = newDoorPosition;
     }
 
+    public BoundsInt GetBounds()
+    {
+        return bounds;
+    }
+
+    public void OnDestroy()
+    {
+        //Destroy inside objects
+    }
 }

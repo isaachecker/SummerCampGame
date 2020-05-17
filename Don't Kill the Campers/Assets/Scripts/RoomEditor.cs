@@ -3,30 +3,67 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public enum State
-{
-    None,
-    Build,
-    Edit,
-    Erase,
-    AddDoor
-}
-
 public class RoomEditor : MonoBehaviour
 {
+    public enum State
+    {
+        None,
+        Build,
+        Edit,
+        Erase,
+        AddDoor
+    }
+
+    private State _state;
+    public State state
+    {
+        get { return _state; }
+        set
+        {
+            if (_state == value) return;
+            switch (_state)
+            {
+                case State.None: break;
+                case State.Build:
+                    EndBuildRoom();
+                    break;
+                case State.Edit: break;
+                case State.Erase: break;
+                case State.AddDoor:
+                    EndAddDoor();
+                    break;
+            }
+            _state = value;
+            switch (_state)
+            {
+                case State.None: break;
+                case State.Build:
+                    StartBuildRoom();
+                    break;
+                case State.Edit: break;
+                case State.Erase: break;
+                case State.AddDoor:
+                    StartAddDoor();
+                    break;
+            }
+        }
+    }
+
     public RuleTile roomRuleTilePrefab;
     public Tile doorTilePrefab;
     public Tilemap tilemapPrefab;
     public Room roomPrefab;
     public TileBase BlockTile;
+
     private Tilemap _tilemapInst, tilemapColl;
     private Vector3Int clickPos, curMousePos, lastMousePos;
     private Grid grid;
-    private State state;
-    private BoundsInt curBounds, lastBounds;
+    private BoundsInt curBounds;
     private List<BoundsInt> bounds;
     private RuleTile[] tileArray;
     private Room room;
+    private SimplePathFinding2D PF2D;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -40,6 +77,7 @@ public class RoomEditor : MonoBehaviour
         {
             tileArray[index] = roomRuleTilePrefab;
         }
+        PF2D = grid.GetComponent<SimplePathFinding2D>();
     }
 
     // Update is called once per frame
@@ -50,12 +88,12 @@ public class RoomEditor : MonoBehaviour
         switch (state)
         {
             case State.None:
-                if (Input.GetKeyDown(KeyCode.Space))StartBuildRoom();
-                else if (Input.GetKeyDown(KeyCode.D)) StartAddDoor();
+                if (Input.GetKeyDown(KeyCode.Space)) state = State.Build;
+                else if (Input.GetKeyDown(KeyCode.D)) state = State.AddDoor;
                 break;
             case State.Build:
                 ContinueBuildRoom();
-                if (Input.GetKeyDown(KeyCode.Space)) EndBuildRoom();
+                if (Input.GetKeyDown(KeyCode.Space)) state = State.AddDoor;
                 break;
             case State.Edit:
                 break;
@@ -63,11 +101,9 @@ public class RoomEditor : MonoBehaviour
                 break;
             case State.AddDoor:
                 ContinueAddDoor();
-                if (Input.GetKeyDown(KeyCode.D)) EndAddDoor();
+                if (Input.GetKeyDown(KeyCode.D)) state = State.None;
                 break;
         }
-
-        if (Input.GetKeyDown(KeyCode.C)) Debug.Log(TestCollider());
 
         lastMousePos = curMousePos;
     }
@@ -86,8 +122,6 @@ public class RoomEditor : MonoBehaviour
         grid.GetComponent<SimplePathFinding2D>().SelectedNavigationTileMap = _tilemapInst;
 
         curBounds = GetCurrentBounds();
-
-        state = State.Build;
     }
 
     void ContinueBuildRoom()
@@ -111,9 +145,8 @@ public class RoomEditor : MonoBehaviour
         {
             bounds.Add(curBounds);
             SetCollidersOnEdgeOfBound(curBounds);
-            StartAddDoor();
             room = Instantiate(roomPrefab);
-            room.Initialize(_tilemapInst, curBounds);
+            room.Initialize(curBounds);
         }
         clickPos = Vector3Int.zero;
     }
@@ -156,22 +189,12 @@ public class RoomEditor : MonoBehaviour
             tilemapColl.SetTile(new Vector3Int(bound.xMin, y, Controls.GetTileZpf()), BlockTile);
             tilemapColl.SetTile(new Vector3Int(bound.xMax - 1, y, Controls.GetTileZpf()), BlockTile);
         }
-        grid.GetComponent<SimplePathFinding2D>().UpdateNavMesh(bound);
-    }
-
-    bool TestCollider()
-    {
-        RaycastHit2D test;
-        Vector3 pos = Controls.GetMousePosF();
-        test = Physics2D.Raycast(new Vector2(pos.x, pos.y), new Vector2(0, 0));
-        return test.transform != null;
+        PF2D.UpdateNavMesh(bound);
     }
 
     void StartAddDoor()
     {
         _tilemapInst.SetEditorPreviewTile(curMousePos, doorTilePrefab);
-
-        state = State.AddDoor;
     }
 
     void ContinueAddDoor()
@@ -188,9 +211,7 @@ public class RoomEditor : MonoBehaviour
         room.AddDoor(curMousePos);
 
         tilemapColl.SetTile(Controls.GetMousePosPF(), null);
-        grid.GetComponent<SimplePathFinding2D>().RemoveOneBlockedPoint(Controls.GetMousePosPF());
-
-        state = State.None;
+        PF2D.RemoveOneBlockedPoint(Controls.GetMousePosPF());
     }
 
     bool BoundsIntersect(BoundsInt bound1, BoundsInt bound2)
@@ -209,8 +230,17 @@ public class RoomEditor : MonoBehaviour
             for (int y = bounds.yMin; y < bounds.yMax; y++)
             {
                 _tilemapInst.SetTile(new Vector3Int(x, y, bounds.zMin), null);
+                PF2D.RemoveOneBlockedPoint(new Vector3Int(x, y, Controls.GetTileZpf()));
             }
         }
+        PF2D.UpdateNavMesh(bounds);
+    }
+
+    void DestroyRoom(Room _room)
+    {
+        BoundsInt bounds = _room.GetBounds();
+        EraseTilesWithinBounds(bounds);
+        GameObject.Destroy(_room);
     }
 }
 
