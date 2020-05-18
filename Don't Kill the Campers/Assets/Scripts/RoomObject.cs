@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -53,10 +54,17 @@ public class RoomObject : MonoBehaviour
     
     [SerializeField]
     private List<InteractionPoint> interactionPoints;
+    private string ID;
 
     // Start is called before the first frame update
     void Start()
     {
+        ID = Controls.MakeRandomID(6);
+    }
+
+    public string GetID()
+    {
+        return ID;
     }
 
     public bool HasOpenInteractionPoint()
@@ -107,6 +115,22 @@ public class RoomObject : MonoBehaviour
         if (index >= interactionPoints.Count) return Vector3.zero;
         return interactionPoints[index].GetEntryPointLocation();
     }
+
+    public bool AreInteractionPointsAvailable()
+    {
+        foreach (InteractionPoint IP in interactionPoints)
+        {
+            if (!IP.IsLocked()) return true;
+        }
+        return false;
+    }
+
+    public static List<Room.Type> GetAllowedRoomTypes<T>()
+    {
+        if (typeof(T) == typeof(Bed)) return new List<Room.Type>{ Room.Type.Cabin };
+        return new List<Room.Type>();
+    }
+
 
     //require an action once a path follower gets to an entry point
     //require an action to move from the entry point to the interaction point

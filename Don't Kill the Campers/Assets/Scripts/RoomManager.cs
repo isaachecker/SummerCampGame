@@ -54,6 +54,15 @@ public class RoomManager : MonoBehaviour
         else return null;
     }
 
+    public List<Room> GetRoomsOfType(Room.Type type)
+    {
+        switch(type)
+        {
+            case Room.Type.Cabin: return cabins;
+        }
+        return null;
+    }
+
     public T CreateRoom<T>(BoundsInt bounds) where T : Room
     {
         Debug.Log(typeof(T));
@@ -77,5 +86,24 @@ public class RoomManager : MonoBehaviour
             }
         }
         return null;
+    }
+
+    public List<Room> GetRoomsWithAvailableObjectType<T>() where T : RoomObject
+    {
+        List<Room.Type> roomTypes = RoomObject.GetAllowedRoomTypes<T>();
+        List<Room> roomList = new List<Room>();
+        List<Room> returnList = new List<Room>();
+        foreach (Room.Type type in roomTypes)
+        {
+            roomList = GetRoomsOfType(type);
+            foreach (Room room in roomList)
+            {
+                if (room.HasAvailableObjectType<T>())
+                {
+                    returnList.Add(room);
+                }
+            }
+        }
+        return returnList;
     }
 }

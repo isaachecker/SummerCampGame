@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public static class Controls
 {
@@ -31,5 +32,15 @@ public static class Controls
     public static int GetTileZpf()
     {
         return 0;
+    }
+
+    public static string MakeRandomID(int size)
+    {
+        string id = "";
+        for (int i = 0; i < size; i++)
+        {
+            id += Convert.ToChar(Mathf.Floor(UnityEngine.Random.Range(65, 90)));
+        }
+        return id;
     }
 }

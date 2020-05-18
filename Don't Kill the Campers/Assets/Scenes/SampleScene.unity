@@ -422,6 +422,53 @@ Tilemap:
     e31: 0
     e32: 0
     e33: 1
+--- !u!1 &1412963058
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1412963060}
+  - component: {fileID: 1412963059}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1412963059
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1412963058}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7498e7622f41f42aaaa8eb1490f05022, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  interactionPoints:
+  - center: {x: 0, y: 0, z: 0}
+    interactionOffsetFromCenter: {x: 0, y: 0}
+    entryOffsetFromCenter: {x: 0, y: 0}
+--- !u!4 &1412963060
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1412963058}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 7.9943137, y: 10.473483, z: -76.94926}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 6
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1435491757
 GameObject:
   m_ObjectHideFlags: 0
@@ -571,8 +618,6 @@ MonoBehaviour:
   roomRuleTilePrefab: {fileID: 11400000, guid: 3c67d73e30b944b8aa5313ce38910558, type: 2}
   doorTilePrefab: {fileID: 11400000, guid: 0d8fe6f5719864d3287255f5208afe30, type: 2}
   tilemapPrefab: {fileID: 955161992}
-  roomPrefab: {fileID: 8775785334590014460, guid: d7a542bb98b034146ab09f820834eb4f,
-    type: 3}
   BlockTile: {fileID: 11400000, guid: 4e5f6da05d3404ee79522fa1d25a91b3, type: 2}
 --- !u!4 &1620643265
 Transform:
@@ -736,6 +781,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 5
+  distToTargetNextPoint: 0.1
 --- !u!212 &1837054910
 SpriteRenderer:
   m_ObjectHideFlags: 0

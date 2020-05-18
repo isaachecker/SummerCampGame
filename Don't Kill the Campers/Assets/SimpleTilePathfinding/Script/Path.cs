@@ -20,6 +20,7 @@ namespace SimplePF2D{
                                     // However, static paths generate a path from the initially specified start position of the path.
         private int internalindex = 0; // The internal pointer that keep tracks of the point in the path point list this path is on.
         private static bool init = false;
+        private float pathLength = -1;
 
         // This needs to be created with a valid SimplePathFinding2D object. Not doing so will cause issues.
         public Path(SimplePathFinding2D newpf)
@@ -237,6 +238,26 @@ namespace SimplePF2D{
         public void DebugClearMarkers()
         {
             pf.DebugClearPathMarker();
+        }
+
+        /// <summary>
+        /// Gets the length of this path by calculating the distance between all the points
+        /// </summary>
+        /// <returns></returns>
+        public float GetPathLength()
+        {
+            if (pathLength > -1) return pathLength;
+            if (!IsGenerated()) return float.MaxValue;
+            else if (pathpoints.Count == 0) return 0;
+
+            float dist = 0;
+            Vector3Int lastPoint = pathpoints[0];
+            for (int i = 1; i < pathpoints.Count; i++)
+            {
+                dist += Vector3Int.Distance(lastPoint, pathpoints[i]);
+            }
+            pathLength = dist;
+            return pathLength;
         }
     }
 }
