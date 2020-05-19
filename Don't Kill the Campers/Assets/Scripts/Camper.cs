@@ -14,25 +14,24 @@ public class Camper : PathFollower
     private State state;
 
     // Start is called before the first frame update
-    void Start()
+    protected override void Start()
     {
-        
+        base.Start();
     }
 
     // Update is called once per frame
-    void Update()
+    protected override void Update()
     {
-        
+        base.Update();
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            CreatePathToObject<Bed>();
+        }
     }
 
-    void FindBed()
+    void CreatePathToObject<T>() where T : RoomObject
     {
-        pathMan.GetPathToRoomObject<Bed>(path);
+        pathMan.GetPathToRoomObject<T>(this);
         state = State.WaitingForPath;
-    }
-
-    void CreatePath()
-    {
-
     }
 }

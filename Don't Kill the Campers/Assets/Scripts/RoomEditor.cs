@@ -11,7 +11,8 @@ public class RoomEditor : MonoBehaviour
         Build,
         Edit,
         Erase,
-        AddDoor
+        AddDoor,
+        AddObject,
     }
 
     private State _state;
@@ -32,6 +33,9 @@ public class RoomEditor : MonoBehaviour
                 case State.AddDoor:
                     EndAddDoor();
                     break;
+                case State.AddObject:
+                    EndAddObject();
+                    break;
             }
             _state = value;
             switch (_state)
@@ -45,6 +49,9 @@ public class RoomEditor : MonoBehaviour
                 case State.AddDoor:
                     StartAddDoor();
                     break;
+                case State.AddObject:
+                    StartAddObject();
+                    break;
             }
         }
     }
@@ -53,6 +60,7 @@ public class RoomEditor : MonoBehaviour
     public Tile doorTilePrefab;
     public Tilemap tilemapPrefab;
     public TileBase BlockTile;
+    public Bed bedPrefab;
 
     private Tilemap _tilemapInst, tilemapColl;
     private Vector3Int clickPos, curMousePos, lastMousePos;
@@ -63,15 +71,16 @@ public class RoomEditor : MonoBehaviour
     private List<Room> rooms;
     private SimplePathFinding2D PF2D;
     private RoomManager roomMan;
+    private Bed bed;
 
     // Start is called before the first frame update
     void Start()
     {
         grid = GameObject.Find("Grid").GetComponent<Grid>();
         tilemapColl = GameObject.Find("TilemapColl").GetComponent<Tilemap>();
-        PF2D = grid.GetComponent<SimplePathFinding2D>();
         roomMan = GameObject.Find("RoomManager").GetComponent<RoomManager>();
-
+        PF2D = grid.GetComponent<SimplePathFinding2D>();
+        
         state = State.None;
         rooms = new List<Room>();
 
@@ -92,6 +101,7 @@ public class RoomEditor : MonoBehaviour
             case State.None:
                 if (Input.GetKeyDown(KeyCode.Space)) state = State.Build;
                 else if (Input.GetKeyDown(KeyCode.D)) state = State.AddDoor;
+                else if (Input.GetKeyDown(KeyCode.B) && room != null) state = State.AddObject; 
                 break;
             case State.Build:
                 ContinueBuildRoom();
@@ -104,6 +114,9 @@ public class RoomEditor : MonoBehaviour
             case State.AddDoor:
                 ContinueAddDoor();
                 if (Input.GetKeyDown(KeyCode.D)) state = State.None;
+                break;
+            case State.AddObject:
+                ContinueAddObject();
                 break;
         }
 
@@ -220,6 +233,22 @@ public class RoomEditor : MonoBehaviour
             }
         }
         PF2D.UpdateNavMesh(bounds);
+    }
+
+    void StartAddObject()
+    {
+        bed = Instantiate(bedPrefab);
+        bed.transform.position = curMousePos;
+    }
+    void ContinueAddObject()
+    {
+        bed.transform.position = curMousePos;
+        if (Input.GetKeyDown(KeyCode.B)) state = State.None;
+    }
+    void EndAddObject()
+    {
+        room.AddRoomObject(bed);
+        bed = null;
     }
 }
 

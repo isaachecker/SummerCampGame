@@ -12,21 +12,18 @@ public class PathFollower : MonoBehaviour
     private Vector3 nextPoint;
     private bool isStationary = true;
     protected PathManager pathMan;
+    protected Room.RoomTarget roomTarget;
 
-    void Start()
+    protected virtual void Start()
     {
         path = new Path(GameObject.Find("Grid").GetComponent<SimplePathFinding2D>());
         pathMan = GameObject.Find("PathManager").GetComponent<PathManager>();
         nextPoint = Vector3.zero;
     }
 
-    void Update()
+    protected virtual void Update()
     {
-        /*if (Input.GetMouseButtonDown(0))
-        {
-            Vector3Int mousePos = Controls.GetMousePos();
-            path.CreatePath(transform.position, mousePos);
-        }*/
+        MoveAlongPath();
     }
 
     Vector3 MoveTowardsNextPoint()
@@ -86,4 +83,17 @@ public class PathFollower : MonoBehaviour
     {
         path.CreatePath(start, end);
     }
+
+    public void SetRoomTarget(Room.RoomTarget RT)
+    {
+        roomTarget = RT;
+    }
+
+    public bool SetPath(Path p)
+    {
+        if (!p.IsGenerated()) return false;
+        path = p;
+        return true;
+    }
+
 }

@@ -37,10 +37,10 @@ public static class Controls
     public static string MakeRandomID(int size)
     {
         string id = "";
-        for (int i = 0; i < size; i++)
-        {
-            id += Convert.ToChar(Mathf.Floor(UnityEngine.Random.Range(65, 90)));
-        }
+        //for (int i = 0; i < size; i++)
+       // {
+         //   id += Convert.ToChar(Mathf.Floor(UnityEngine.Random.Range(65, 90)));
+       // }
         return id;
     }
 }

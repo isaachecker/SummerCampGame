@@ -5,6 +5,20 @@ using UnityEngine.Tilemaps;
 
 public class Room
 {
+    public class RoomTarget
+    {
+        public Room room;
+        public RoomObject obj;
+        public int objectInteractionIndex;
+
+        public RoomTarget(Room _room, RoomObject _obj, int OII)
+        {
+            room = _room;
+            obj = _obj;
+            objectInteractionIndex = OII;
+        }
+    }
+
     public enum Type
     {
         Cabin,
@@ -64,5 +78,36 @@ public class Room
             }
         }
         return false;
+    }
+
+    public int LockAvailableObjectType<T>()
+    {
+        int indexVal = -1;
+        foreach (RoomObject obj in objectList)
+        {
+            if (obj.GetType() == typeof(T) && obj.AreInteractionPointsAvailable())
+            {
+                indexVal = obj.LockOpenInteractionPoint();
+                if (indexVal > -1) break;
+            }
+        }
+        return indexVal;
+    }
+
+    public RoomObject LockAvailablePointOnObjectType(System.Type t, ref int lockIndex)
+    {
+        lockIndex = -1;
+        foreach (RoomObject obj in objectList)
+        {
+            if (obj.GetType() == t && obj.AreInteractionPointsAvailable())
+            {
+                lockIndex = obj.LockOpenInteractionPoint();
+                if (lockIndex > -1)
+                {
+                    return obj;
+                }
+            }
+        }
+        return null;
     }
 }

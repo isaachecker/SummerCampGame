@@ -19,7 +19,6 @@ namespace SimplePF2D{
         private bool isdynamicflag; // Is a static or dynamic path. If the path is blocked, dynamic paths regenerate the path from the point of blockage. 
                                     // However, static paths generate a path from the initially specified start position of the path.
         private int internalindex = 0; // The internal pointer that keep tracks of the point in the path point list this path is on.
-        private static bool init = false;
         private float pathLength = -1;
 
         // This needs to be created with a valid SimplePathFinding2D object. Not doing so will cause issues.
