@@ -3,17 +3,19 @@ using System.Collections.Generic;
 using UnityEngine;
 using SimplePF2D;
 
-public class PathFollower : MonoBehaviour
+public abstract class PathFollower : MonoBehaviour
 {
-    public enum State
+    public enum PathState
     {
         None,
         WaitingForPath,
-        TravelingOnPath
+        TravelingOnPath,
+        Arrived,
+        UniqueAction
     }
 
-    private State _state;
-    protected State state
+    private PathState _state;
+    protected PathState pathState
     {
         get { return _state; }
         set
@@ -21,18 +23,28 @@ public class PathFollower : MonoBehaviour
             if (_state == value) return;
             switch (value)
             {
-                case State.None: break;
-                case State.WaitingForPath: break;
-                case State.TravelingOnPath: break;
+                case PathState.None: break;
+                case PathState.WaitingForPath: break;
+                case PathState.TravelingOnPath: break;
+                case PathState.Arrived: break;
+                case PathState.UniqueAction:
+                    EndUniqueAction();
+                    break;
             }
             _state = value;
             switch (value)
             {
-                case State.None: break;
-                case State.WaitingForPath:
+                case PathState.None: break;
+                case PathState.WaitingForPath:
                     StartWaitingForPath();
                     break;
-                case State.TravelingOnPath: break;
+                case PathState.TravelingOnPath: break;
+                case PathState.Arrived:
+                    StartArrived();
+                    break;
+                case PathState.UniqueAction:
+                    StartUniqueAction();
+                    break;
             }
         }
     }
@@ -53,24 +65,6 @@ public class PathFollower : MonoBehaviour
         nextPoint = Vector3.zero;
     }
 
-    protected virtual void Update()
-    {
-        /*
-        switch (state)
-        {
-            case State.None:
-                ContinueNoState();
-                break;
-            case State.WaitingForPath:
-                ContinueWaitingForPath();
-                break;
-            case State.TravelingOnPath:
-                ContinueTravelingOnPath();
-                break;
-        }
-        */
-    }
-
     protected virtual void ContinueNoState()
     {
         if (Input.GetKeyDown(KeyCode.P))
@@ -79,23 +73,34 @@ public class PathFollower : MonoBehaviour
         }
     }
 
-    protected void StartWaitingForPath()
+    protected virtual void StartWaitingForPath()
     {
         if (roomTarget == null) return;
         roomTarget.UnlockInteractionPoint();
         roomTarget = null;
     }
 
-    protected void ContinueWaitingForPath()
+    protected virtual void ContinueWaitingForPath()
     {
-        if (path.IsGenerated()) state = State.TravelingOnPath;
+        if (path.IsGenerated()) pathState = PathState.TravelingOnPath;
     }
 
-    protected void ContinueTravelingOnPath()
+    protected virtual void ContinueTravelingOnPath()
     {
         MoveAlongPath();
-        if (isStationary) state = State.None;
+        if (isStationary) pathState = PathState.None;
     }
+
+    protected virtual void StartArrived()
+    {
+        isStationary = true;
+        NormalizePosition();
+        pathState = PathState.None;
+    }
+
+    protected abstract void StartUniqueAction();
+    protected abstract void ContinueUniqueAction();
+    protected abstract void EndUniqueAction();
 
     Vector3 MoveTowardsNextPoint()
     {
@@ -103,7 +108,7 @@ public class PathFollower : MonoBehaviour
         return transform.position + (direction * speed * Time.deltaTime);
     }
 
-    void NormalizePosition()
+    protected void NormalizePosition()
     {
         Vector3 pos = transform.position;
         pos.x = Mathf.Floor(pos.x);
@@ -126,8 +131,7 @@ public class PathFollower : MonoBehaviour
                 }
                 else
                 {
-                    isStationary = true;
-                    NormalizePosition();
+                    pathState = PathState.Arrived;
                 }
             }
             else
@@ -135,8 +139,7 @@ public class PathFollower : MonoBehaviour
                 Vector2 delta = nextPoint - transform.position;
                 if (delta.magnitude <= distToTargetNextPoint && !path.GetNextPoint(ref nextPoint))
                 {
-                    isStationary = true;
-                    NormalizePosition();
+                    pathState = PathState.Arrived;
                 }
                 if (nextPoint != null)
                 {
@@ -172,12 +175,12 @@ public class PathFollower : MonoBehaviour
     protected virtual void CreatePathToObject<T>() where T : RoomObject
     {
         pathMan.GetPathToRoomObject<T>(this);
-        state = State.WaitingForPath;
+        pathState = PathState.WaitingForPath;
     }
 
     public void CouldNotSetTarget()
     {
         Debug.Log("Could not find or create path.");
-        state = State.None;
+        pathState = PathState.None;
     }
 }

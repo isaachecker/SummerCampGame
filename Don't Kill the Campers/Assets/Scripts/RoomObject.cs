@@ -49,11 +49,20 @@ public class RoomObject : MonoBehaviour
             objPos.y += entryOffsetFromCenter.y;
             return objPos;
         }
+
+        public Vector3 GetInteractionPointLocation(Vector3 objPos)
+        {
+            objPos.x += interactionOffsetFromCenter.x;
+            objPos.y += interactionOffsetFromCenter.y;
+            return objPos;
+        }
     }
     
     [SerializeField]
     private List<InteractionPoint> interactionPoints;
     private string ID;
+    [SerializeField]
+    CamperState toCamperState;
 
     // Start is called before the first frame update
     void Start()
@@ -111,8 +120,22 @@ public class RoomObject : MonoBehaviour
 
     public Vector3 GetInteractionPointEntryLocation(int index)
     {
-        if (index >= interactionPoints.Count || index < 0) return Vector3.zero;
+        if (index >= interactionPoints.Count || index < 0)
+        {
+            Debug.LogError("Bad Interaction Point input");
+            return Vector3.zero;
+        }
         return interactionPoints[index].GetEntryPointLocation(transform.position);
+    }
+
+    public Vector3 GetInteractionPointLocation(int index)
+    {
+        if (index >= interactionPoints.Count || index < 0)
+        {
+            Debug.LogError("Bad Interaction Point input");
+            return Vector3.zero;
+        }
+        return interactionPoints[index].GetInteractionPointLocation(transform.position);
     }
 
     public bool AreInteractionPointsAvailable()
@@ -131,6 +154,10 @@ public class RoomObject : MonoBehaviour
         return new List<Room.Type>();
     }
 
+    public CamperState GetCamperStateOnUse()
+    {
+        return toCamperState;
+    }
 
     //require an action once a path follower gets to an entry point
     //require an action to move from the entry point to the interaction point

@@ -99,3 +99,4 @@ MonoBehaviour:
   - center: {x: 0, y: 0, z: 0}
     interactionOffsetFromCenter: {x: 0, y: 0}
     entryOffsetFromCenter: {x: -1, y: 0}
+  toCamperState: 1

@@ -69,7 +69,6 @@ public class RoomEditor : MonoBehaviour
     private BoundsInt curBounds;
     private RuleTile[] tileArray;
     private Room room;
-    private List<Room> rooms;
     private SimplePathFinding2D PF2D;
     private RoomManager roomMan;
     private RoomObject selectedObj;
@@ -83,7 +82,6 @@ public class RoomEditor : MonoBehaviour
         PF2D = grid.GetComponent<SimplePathFinding2D>();
         
         state = State.None;
-        rooms = new List<Room>();
 
         tileArray = new RuleTile[1000];
         for (int index = 0; index < tileArray.Length; index++)
@@ -170,13 +168,6 @@ public class RoomEditor : MonoBehaviour
         return new BoundsInt(xMin, yMin, Controls.GetTileZ(), xDiff, yDiff, Controls.GetTileZ());
     }
 
-    bool BoundsEncapsulatesBounds(BoundsInt container, BoundsInt containee)
-    {
-        if (!container.Contains(containee.max)) return false;
-        if (!container.Contains(containee.min)) return false;
-        return true;
-    }
-
     void SetCollidersOnEdgeOfBound(BoundsInt bound)
     {
         for (int x = bound.xMin; x < bound.xMax; x++)
@@ -209,7 +200,7 @@ public class RoomEditor : MonoBehaviour
     void ContinueAddDoor()
     {
         _tilemapInst.ClearAllEditorPreviewTiles();
-        Vector3Int pos = ConstrainPointToBounds(curBounds, curMousePos);
+        Vector3Int pos = _Bounds.ConstrainPointToBounds(curBounds, curMousePos);
         //pos = ConstrainPointToOuterBounds(curBounds, pos);
         _tilemapInst.SetEditorPreviewTile(pos, doorTilePrefab);
     }
@@ -223,15 +214,6 @@ public class RoomEditor : MonoBehaviour
 
         tilemapColl.SetTile(Controls.GetMousePosPF(), null);
         PF2D.RemoveOneBlockedPoint(Controls.GetMousePosPF());
-    }
-
-    bool BoundsIntersect(BoundsInt bound1, BoundsInt bound2)
-    {
-        bool xInt = (bound1.xMin <= bound2.xMin && bound1.xMax >= bound2.xMin) ||
-            (bound1.xMin <= bound2.xMax && bound1.xMax >= bound2.xMax);
-        bool yInt = (bound1.yMin <= bound2.yMin && bound1.yMax >= bound2.yMin) ||
-            (bound1.yMin <= bound2.yMax && bound1.yMax >= bound2.yMax);
-        return xInt && yInt;
     }
 
     void EraseTilesWithinBounds(BoundsInt bounds)
@@ -250,13 +232,13 @@ public class RoomEditor : MonoBehaviour
     void StartAddObject()
     {
         selectedObj = Instantiate(selectedObj);
-        selectedObj.transform.position = ConstrainPointToInnerBounds(curBounds, curMousePos);
+        selectedObj.transform.position = _Bounds.ConstrainPointToInnerBounds(curBounds, curMousePos);
         
     }
 
     void ContinueAddObject()
     {
-        Vector3 pos = ConstrainPointToInnerBounds(curBounds, curMousePos);
+        Vector3 pos = _Bounds.ConstrainPointToInnerBounds(curBounds, curMousePos);
         pos.x += .5f;
         pos.y += .5f;
         selectedObj.transform.position = pos;
@@ -268,25 +250,6 @@ public class RoomEditor : MonoBehaviour
         room.AddRoomObject(selectedObj);
         SetColliderOnPoint(Controls.GetMousePosPF(), true);
         selectedObj = null;
-    }
-
-    Vector3Int ConstrainPointToBounds(BoundsInt bounds, Vector3Int point)
-    {
-        if (bounds.Contains(point)) return point;
-        if (point.x > bounds.xMax - 1) point.x = bounds.xMax - 1;
-        else if (point.x < bounds.xMin) point.x = bounds.xMin;
-        if (point.y > bounds.yMax - 1) point.y = bounds.yMax - 1;
-        else if (point.y < bounds.yMin) point.y = bounds.yMin;
-        return point;
-    }
-
-    Vector3Int ConstrainPointToInnerBounds(BoundsInt bounds, Vector3Int point)
-    {
-        if (point.x > bounds.xMax - 2) point.x = bounds.xMax - 2;
-        else if (point.x < bounds.xMin + 1) point.x = bounds.xMin + 1;
-        if (point.y > bounds.yMax - 2) point.y = bounds.yMax - 2;
-        else if (point.y < bounds.yMin + 1) point.y = bounds.yMin + 1;
-        return point;
     }
 
     private bool SetRoomObjectPrefab()
