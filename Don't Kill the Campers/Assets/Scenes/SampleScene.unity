@@ -198,13 +198,14 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519420028}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c6a0c8209da134f88bc1bb8bd982608f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 10
   sizeAdjustIncrement: 5
+  maxCamDistance: 25
 --- !u!20 &519420031
 Camera:
   m_ObjectHideFlags: 0
@@ -616,6 +617,8 @@ MonoBehaviour:
   tilemapPrefab: {fileID: 955161992}
   BlockTile: {fileID: 11400000, guid: 4e5f6da05d3404ee79522fa1d25a91b3, type: 2}
   bedPrefab: {fileID: 3661024628194316687, guid: 884a3c336e25045c38b8da5751664d20,
+    type: 3}
+  trunkPrefab: {fileID: 6824629169215116243, guid: 90efa0632204543169dc07f01250781b,
     type: 3}
 --- !u!4 &1620643265
 Transform:

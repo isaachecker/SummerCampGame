@@ -5,12 +5,44 @@ using SimplePF2D;
 
 public class PathFollower : MonoBehaviour
 {
+    public enum State
+    {
+        None,
+        WaitingForPath,
+        TravelingOnPath
+    }
+
+    private State _state;
+    protected State state
+    {
+        get { return _state; }
+        set
+        {
+            if (_state == value) return;
+            switch (value)
+            {
+                case State.None: break;
+                case State.WaitingForPath: break;
+                case State.TravelingOnPath: break;
+            }
+            _state = value;
+            switch (value)
+            {
+                case State.None: break;
+                case State.WaitingForPath:
+                    StartWaitingForPath();
+                    break;
+                case State.TravelingOnPath: break;
+            }
+        }
+    }
+
     public float speed = 1.0f;
     public float distToTargetNextPoint = 0.1f;
 
     protected Path path;
     private Vector3 nextPoint;
-    private bool isStationary = true;
+    protected bool isStationary = true;
     protected PathManager pathMan;
     protected Room.RoomTarget roomTarget;
 
@@ -23,7 +55,46 @@ public class PathFollower : MonoBehaviour
 
     protected virtual void Update()
     {
+        /*
+        switch (state)
+        {
+            case State.None:
+                ContinueNoState();
+                break;
+            case State.WaitingForPath:
+                ContinueWaitingForPath();
+                break;
+            case State.TravelingOnPath:
+                ContinueTravelingOnPath();
+                break;
+        }
+        */
+    }
+
+    protected virtual void ContinueNoState()
+    {
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            CreatePathToObject<Trunk>();
+        }
+    }
+
+    protected void StartWaitingForPath()
+    {
+        if (roomTarget == null) return;
+        roomTarget.UnlockInteractionPoint();
+        roomTarget = null;
+    }
+
+    protected void ContinueWaitingForPath()
+    {
+        if (path.IsGenerated()) state = State.TravelingOnPath;
+    }
+
+    protected void ContinueTravelingOnPath()
+    {
         MoveAlongPath();
+        if (isStationary) state = State.None;
     }
 
     Vector3 MoveTowardsNextPoint()
@@ -87,6 +158,8 @@ public class PathFollower : MonoBehaviour
     public void SetRoomTarget(Room.RoomTarget RT)
     {
         roomTarget = RT;
+        int idx = RT.objectInteractionIndex;
+        path.CreatePath(transform.position, RT.obj.GetInteractionPointEntryLocation(idx));
     }
 
     public bool SetPath(Path p)
@@ -96,4 +169,15 @@ public class PathFollower : MonoBehaviour
         return true;
     }
 
+    protected virtual void CreatePathToObject<T>() where T : RoomObject
+    {
+        pathMan.GetPathToRoomObject<T>(this);
+        state = State.WaitingForPath;
+    }
+
+    public void CouldNotSetTarget()
+    {
+        Debug.Log("Could not find or create path.");
+        state = State.None;
+    }
 }

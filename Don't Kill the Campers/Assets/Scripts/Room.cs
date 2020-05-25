@@ -17,6 +17,11 @@ public class Room
             obj = _obj;
             objectInteractionIndex = OII;
         }
+
+        public bool UnlockInteractionPoint()
+        {
+            return obj.UnlockInteractionPoint(objectInteractionIndex);
+        }
     }
 
     public enum Type

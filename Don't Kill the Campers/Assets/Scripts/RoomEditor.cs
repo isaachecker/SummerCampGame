@@ -61,6 +61,7 @@ public class RoomEditor : MonoBehaviour
     public Tilemap tilemapPrefab;
     public TileBase BlockTile;
     public Bed bedPrefab;
+    public Trunk trunkPrefab;
 
     private Tilemap _tilemapInst, tilemapColl;
     private Vector3Int clickPos, curMousePos, lastMousePos;
@@ -71,7 +72,7 @@ public class RoomEditor : MonoBehaviour
     private List<Room> rooms;
     private SimplePathFinding2D PF2D;
     private RoomManager roomMan;
-    private Bed bed;
+    private RoomObject selectedObj;
 
     // Start is called before the first frame update
     void Start()
@@ -101,7 +102,7 @@ public class RoomEditor : MonoBehaviour
             case State.None:
                 if (Input.GetKeyDown(KeyCode.Space)) state = State.Build;
                 else if (Input.GetKeyDown(KeyCode.D)) state = State.AddDoor;
-                else if (Input.GetKeyDown(KeyCode.B) && room != null) state = State.AddObject; 
+                else if (SetRoomObjectPrefab()) state = State.AddObject;
                 break;
             case State.Build:
                 ContinueBuildRoom();
@@ -180,15 +181,24 @@ public class RoomEditor : MonoBehaviour
     {
         for (int x = bound.xMin; x < bound.xMax; x++)
         {
-            tilemapColl.SetTile(new Vector3Int(x, bound.yMin, Controls.GetTileZpf()), BlockTile);
-            tilemapColl.SetTile(new Vector3Int(x, bound.yMax - 1, Controls.GetTileZpf()), BlockTile);
+            SetColliderOnPoint(new Vector3Int(x, bound.yMin, Controls.GetTileZpf()));
+            SetColliderOnPoint(new Vector3Int(x, bound.yMax - 1, Controls.GetTileZpf()));
         }
         for (int y = bound.yMin; y < bound.yMax; y++)
         {
-            tilemapColl.SetTile(new Vector3Int(bound.xMin, y, Controls.GetTileZpf()), BlockTile);
-            tilemapColl.SetTile(new Vector3Int(bound.xMax - 1, y, Controls.GetTileZpf()), BlockTile);
+            SetColliderOnPoint(new Vector3Int(bound.xMin, y, Controls.GetTileZpf()));
+            SetColliderOnPoint(new Vector3Int(bound.xMax - 1, y, Controls.GetTileZpf()));
         }
         PF2D.UpdateNavMesh(bound);
+    }
+
+    void SetColliderOnPoint(Vector3Int point, bool updateNavMesh = false)
+    {
+        tilemapColl.SetTile(point, BlockTile);
+        if (updateNavMesh)
+        {
+            PF2D.UpdateNavMesh(new BoundsInt(point.x - 1, point.y - 1, Controls.GetTileZpf(), 2, 2, 0));
+        }
     }
 
     void StartAddDoor()
@@ -199,7 +209,9 @@ public class RoomEditor : MonoBehaviour
     void ContinueAddDoor()
     {
         _tilemapInst.ClearAllEditorPreviewTiles();
-        _tilemapInst.SetEditorPreviewTile(curMousePos, doorTilePrefab);
+        Vector3Int pos = ConstrainPointToBounds(curBounds, curMousePos);
+        //pos = ConstrainPointToOuterBounds(curBounds, pos);
+        _tilemapInst.SetEditorPreviewTile(pos, doorTilePrefab);
     }
 
     void EndAddDoor()
@@ -237,18 +249,53 @@ public class RoomEditor : MonoBehaviour
 
     void StartAddObject()
     {
-        bed = Instantiate(bedPrefab);
-        bed.transform.position = curMousePos;
+        selectedObj = Instantiate(selectedObj);
+        selectedObj.transform.position = ConstrainPointToInnerBounds(curBounds, curMousePos);
+        
     }
+
     void ContinueAddObject()
     {
-        bed.transform.position = curMousePos;
-        if (Input.GetKeyDown(KeyCode.B)) state = State.None;
+        Vector3 pos = ConstrainPointToInnerBounds(curBounds, curMousePos);
+        pos.x += .5f;
+        pos.y += .5f;
+        selectedObj.transform.position = pos;
+        if (Input.GetKeyDown(KeyCode.O)) state = State.None;
     }
+
     void EndAddObject()
     {
-        room.AddRoomObject(bed);
-        bed = null;
+        room.AddRoomObject(selectedObj);
+        SetColliderOnPoint(Controls.GetMousePosPF(), true);
+        selectedObj = null;
+    }
+
+    Vector3Int ConstrainPointToBounds(BoundsInt bounds, Vector3Int point)
+    {
+        if (bounds.Contains(point)) return point;
+        if (point.x > bounds.xMax - 1) point.x = bounds.xMax - 1;
+        else if (point.x < bounds.xMin) point.x = bounds.xMin;
+        if (point.y > bounds.yMax - 1) point.y = bounds.yMax - 1;
+        else if (point.y < bounds.yMin) point.y = bounds.yMin;
+        return point;
+    }
+
+    Vector3Int ConstrainPointToInnerBounds(BoundsInt bounds, Vector3Int point)
+    {
+        if (point.x > bounds.xMax - 2) point.x = bounds.xMax - 2;
+        else if (point.x < bounds.xMin + 1) point.x = bounds.xMin + 1;
+        if (point.y > bounds.yMax - 2) point.y = bounds.yMax - 2;
+        else if (point.y < bounds.yMin + 1) point.y = bounds.yMin + 1;
+        return point;
+    }
+
+    private bool SetRoomObjectPrefab()
+    {
+        if (room == null) return false;
+        selectedObj = null;
+        if (Input.GetKeyDown(KeyCode.B)) selectedObj = bedPrefab;
+        else if (Input.GetKeyDown(KeyCode.T)) selectedObj = trunkPrefab;
+        return selectedObj != null;
     }
 }
 

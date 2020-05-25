@@ -7,6 +7,7 @@ public class CameraControls : MonoBehaviour
     private new Camera camera;
     public float moveSpeed = 5;
     public float sizeAdjustIncrement = 5;
+    public float maxCamDistance = 25;
 
     // Start is called before the first frame update
     void Start()
@@ -24,12 +25,12 @@ public class CameraControls : MonoBehaviour
 
     private void SetFurther()
     {
-        camera.orthographicSize += sizeAdjustIncrement;
+        camera.orthographicSize = Mathf.Min(camera.orthographicSize + sizeAdjustIncrement, maxCamDistance);
     }
 
     private void SetCloser()
     {
-        camera.orthographicSize -= sizeAdjustIncrement;
+        camera.orthographicSize = Mathf.Max(camera.orthographicSize - sizeAdjustIncrement, 5);
     }
 
     private void MoveScreen()

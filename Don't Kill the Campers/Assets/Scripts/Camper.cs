@@ -4,15 +4,6 @@ using UnityEngine;
 
 public class Camper : PathFollower
 {
-    public enum State
-    {
-        None,
-        WaitingForPath,
-        TravelingOnPath
-    }
-
-    private State state;
-
     // Start is called before the first frame update
     protected override void Start()
     {
@@ -22,16 +13,36 @@ public class Camper : PathFollower
     // Update is called once per frame
     protected override void Update()
     {
-        base.Update();
+        switch (state)
+        {
+            case State.None:
+                ContinueNoState();
+                break;
+            case State.WaitingForPath:
+                ContinueWaitingForPath();
+                break;
+            case State.TravelingOnPath:
+                ContinueTravelingOnPath();
+                break;
+        }
+    }
+
+    protected override void ContinueNoState()
+    {
         if (Input.GetKeyDown(KeyCode.P))
+        {
+            CreatePathToObject<Trunk>();
+        }
+        else if (Input.GetKeyDown(KeyCode.L))
         {
             CreatePathToObject<Bed>();
         }
     }
 
-    void CreatePathToObject<T>() where T : RoomObject
+    protected override void CreatePathToObject<T>()
     {
+        state = State.WaitingForPath; //set this first to clear out roomTarget locks.
+        //could have problem if camper cannot find anywhere to go and has to stay here
         pathMan.GetPathToRoomObject<T>(this);
-        state = State.WaitingForPath;
     }
 }

@@ -43,12 +43,11 @@ public class RoomObject : MonoBehaviour
             return canBeAccessed == true ? true : false; //for now, so no compiler errors
         }
 
-        public Vector3 GetEntryPointLocation()
+        public Vector3 GetEntryPointLocation(Vector3 objPos)
         {
-            Vector3 pos = center;
-            pos.x += entryOffsetFromCenter.x;
-            pos.y += entryOffsetFromCenter.y;
-            return pos;
+            objPos.x += entryOffsetFromCenter.x;
+            objPos.y += entryOffsetFromCenter.y;
+            return objPos;
         }
     }
     
@@ -112,8 +111,8 @@ public class RoomObject : MonoBehaviour
 
     public Vector3 GetInteractionPointEntryLocation(int index)
     {
-        if (index >= interactionPoints.Count) return Vector3.zero;
-        return interactionPoints[index].GetEntryPointLocation();
+        if (index >= interactionPoints.Count || index < 0) return Vector3.zero;
+        return interactionPoints[index].GetEntryPointLocation(transform.position);
     }
 
     public bool AreInteractionPointsAvailable()
@@ -127,7 +126,8 @@ public class RoomObject : MonoBehaviour
 
     public static List<Room.Type> GetAllowedRoomTypes<T>()
     {
-        if (typeof(T) == typeof(Bed)) return new List<Room.Type>{ Room.Type.Cabin };
+        if (typeof(T) == typeof(Bed)) return new List<Room.Type> { Room.Type.Cabin };
+        else if (typeof(T) == typeof(Trunk)) return new List<Room.Type> { Room.Type.Cabin };
         return new List<Room.Type>();
     }
 

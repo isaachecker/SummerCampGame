@@ -65,6 +65,11 @@ public class PathManager : MonoBehaviour
         /// </summary>
         public void SetShortestPathData()
         {
+            if (paths == null || paths.Length < 1)
+            {
+                pathFollower.CouldNotSetTarget();
+                return;
+            }
             float shortestPath = float.MaxValue;
             float length;
             int indexOfShortest = 0, lockIndex = -1;
@@ -77,12 +82,17 @@ public class PathManager : MonoBehaviour
                     indexOfShortest = i;
                 }
             }
-            pathFollower.SetPath(paths[indexOfShortest]);
-
             Room nearestRoom = rooms[indexOfShortest];
             RoomObject obj = nearestRoom.LockAvailablePointOnObjectType(roomObjectType, ref lockIndex);
-            Room.RoomTarget roomTarget = new Room.RoomTarget(nearestRoom, obj, lockIndex);
-            pathFollower.SetRoomTarget(roomTarget);
+            if (obj != null)
+            {
+                Room.RoomTarget roomTarget = new Room.RoomTarget(nearestRoom, obj, lockIndex);
+                pathFollower.SetRoomTarget(roomTarget);
+            }
+            else pathFollower.CouldNotSetTarget();
+
+            //don't set this here. Let pathfollower find path to exact object now that we have closest room
+            //pathFollower.SetPath(paths[indexOfShortest]);  
         }
     }
 
