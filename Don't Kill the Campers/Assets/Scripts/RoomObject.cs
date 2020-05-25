@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class RoomObject : MonoBehaviour
+public abstract class RoomObject : MonoBehaviour
 {
-    [System.Serializable]
+    [Serializable]
     protected class InteractionPoint
     {
         [SerializeField]
@@ -62,7 +62,7 @@ public class RoomObject : MonoBehaviour
     private List<InteractionPoint> interactionPoints;
     private string ID;
     [SerializeField]
-    CamperState toCamperState;
+    protected CamperState toCamperState;
 
     // Start is called before the first frame update
     void Start()
@@ -147,10 +147,12 @@ public class RoomObject : MonoBehaviour
         return false;
     }
 
-    public static List<Room.Type> GetAllowedRoomTypes<T>()
+    public static List<Room.Type> GetAllowedRoomTypes<T>() where T : RoomObject
     {
-        if (typeof(T) == typeof(Bed)) return new List<Room.Type> { Room.Type.Cabin };
-        else if (typeof(T) == typeof(Trunk)) return new List<Room.Type> { Room.Type.Cabin };
+        Type typeT = typeof(T);
+        if (typeT == typeof(Bed)) return Bed.GetAllowedRoomTypesSub();
+        else if (typeT == typeof(Trunk)) return Trunk.GetAllowedRoomTypesSub();
+        else if (typeT == typeof(Toilet)) return Toilet.GetAllowedRoomTypesSub();
         return new List<Room.Type>();
     }
 
@@ -158,9 +160,4 @@ public class RoomObject : MonoBehaviour
     {
         return toCamperState;
     }
-
-    //require an action once a path follower gets to an entry point
-    //require an action to move from the entry point to the interaction point
-    //require an action to move from the interaction point to the entry point
-
 }

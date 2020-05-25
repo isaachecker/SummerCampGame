@@ -620,6 +620,8 @@ MonoBehaviour:
     type: 3}
   trunkPrefab: {fileID: 6824629169215116243, guid: 90efa0632204543169dc07f01250781b,
     type: 3}
+  toiletPrefab: {fileID: 7389483219785857575, guid: e17cdd305b86b472f9b11a661ecb73a3,
+    type: 3}
 --- !u!4 &1620643265
 Transform:
   m_ObjectHideFlags: 0

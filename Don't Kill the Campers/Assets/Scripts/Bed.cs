@@ -4,9 +4,9 @@ using UnityEngine;
 
 public class Bed : RoomObject
 {
-    // Start is called before the first frame update
-    void Start()
+    public static List<Room.Type> GetAllowedRoomTypesSub()
     {
-        
+        return new List<Room.Type> { Room.Type.Cabin };
     }
+
 }

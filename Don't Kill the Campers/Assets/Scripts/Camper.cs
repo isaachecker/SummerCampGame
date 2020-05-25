@@ -7,7 +7,8 @@ public enum CamperState
 {
     None,
     Sleeping,
-    Changing
+    Changing,
+    Toilet
 }
 
 public class Camper : PathFollower
@@ -28,17 +29,18 @@ public class Camper : PathFollower
         {
             if (_camperState == value) return;
             _camperState = value;
-            switch(value)
+            actionState = ActionState.PreAction;
+            switch (value)
             {
                 case CamperState.Sleeping:
                 case CamperState.Changing:
-                    actionState = ActionState.PreAction;
+                case CamperState.Toilet:
                     break;
             }
         }
     }
 
-    private int sleepCount = 0;
+    private int sleepCount = 0, toiletCount = 0;
 
     private ActionState _actionState;
     public ActionState actionState
@@ -85,9 +87,15 @@ public class Camper : PathFollower
             case CamperState.Sleeping:
                 SleepingState();
                 break;
+            case CamperState.Changing:
+                break;
+            case CamperState.Toilet:
+                ToiletState();
+                break;
         }
     }
 
+    #region Sleeping
     private void SleepingState()
     {
         switch(actionState)
@@ -101,6 +109,28 @@ public class Camper : PathFollower
             case ActionState.PostAction:
                 PostSleepingState();
                 break;
+        }
+    }
+
+    private void PreSleepingState()
+    {
+        //do whatever needed to get ready for bed
+        Vector3 objInteractionPos = roomTarget.obj.GetInteractionPointLocation(roomTarget.objectInteractionIndex);
+        Vector3 direction = (objInteractionPos - transform.position).normalized;
+        transform.position += (direction * 3 * Time.deltaTime);
+        Vector2 delta = objInteractionPos - transform.position;
+        if (delta.magnitude <= .1f)
+        {
+            actionState = ActionState.MidAction;
+        }
+    }
+
+    private void MidSleepingState()
+    {
+        if (++sleepCount > 500)
+        {
+            sleepCount = 0;
+            actionState = ActionState.PostAction;
         }
     }
 
@@ -118,19 +148,27 @@ public class Camper : PathFollower
             pathState = PathState.None;
         }
     }
+    #endregion
 
-    private void MidSleepingState()
+    #region Toilet
+    private void ToiletState()
     {
-        if (++sleepCount > 120)
+        switch (actionState)
         {
-            sleepCount = 0;
-            actionState = ActionState.PostAction;
+            case ActionState.PreAction:
+                PreToiletState();
+                break;
+            case ActionState.MidAction:
+                MidToiletState();
+                break;
+            case ActionState.PostAction:
+                PostToiletState();
+                break;
         }
     }
 
-    private void PreSleepingState()
+    private void PreToiletState()
     {
-        //do whatever needed to get ready for bed
         Vector3 objInteractionPos = roomTarget.obj.GetInteractionPointLocation(roomTarget.objectInteractionIndex);
         Vector3 direction = (objInteractionPos - transform.position).normalized;
         transform.position += (direction * 3 * Time.deltaTime);
@@ -141,6 +179,31 @@ public class Camper : PathFollower
         }
     }
 
+    private void MidToiletState()
+    {
+        if (++toiletCount > 500)
+        {
+            toiletCount = 0;
+            actionState = ActionState.PostAction;
+        }
+    }
+
+    private void PostToiletState()
+    {
+        //do whatever you need to get off the toilet
+        Vector3 objInteractionPos = roomTarget.obj.GetInteractionPointEntryLocation(roomTarget.objectInteractionIndex);
+        Vector3 direction = (objInteractionPos - transform.position).normalized;
+        transform.position += (direction * 3 * Time.deltaTime);
+        Vector2 delta = objInteractionPos - transform.position;
+        if (delta.magnitude <= .1f)
+        {
+            actionState = ActionState.None;
+            camperState = CamperState.None;
+            pathState = PathState.None;
+        }
+    }
+    #endregion
+
     protected override void ContinueNoState()
     {
         if (Input.GetKeyDown(KeyCode.P))
@@ -150,6 +213,10 @@ public class Camper : PathFollower
         else if (Input.GetKeyDown(KeyCode.L))
         {
             CreatePathToObject<Bed>();
+        }
+        else if(Input.GetKeyDown(KeyCode.M))
+        {
+            CreatePathToObject<Toilet>();
         }
     }
 

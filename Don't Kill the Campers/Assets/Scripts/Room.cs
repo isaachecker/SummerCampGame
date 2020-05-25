@@ -27,7 +27,7 @@ public class Room
     public enum Type
     {
         Cabin,
-        ShowerHouse
+        Bathhouse
     }
 
     private BoundsInt bounds;

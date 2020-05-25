@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -62,6 +63,7 @@ public class RoomEditor : MonoBehaviour
     public TileBase BlockTile;
     public Bed bedPrefab;
     public Trunk trunkPrefab;
+    public Toilet toiletPrefab;
 
     private Tilemap _tilemapInst, tilemapColl;
     private Vector3Int clickPos, curMousePos, lastMousePos;
@@ -72,6 +74,7 @@ public class RoomEditor : MonoBehaviour
     private SimplePathFinding2D PF2D;
     private RoomManager roomMan;
     private RoomObject selectedObj;
+    private Type roomType;
 
     // Start is called before the first frame update
     void Start()
@@ -80,7 +83,8 @@ public class RoomEditor : MonoBehaviour
         tilemapColl = GameObject.Find("TilemapColl").GetComponent<Tilemap>();
         roomMan = GameObject.Find("RoomManager").GetComponent<RoomManager>();
         PF2D = grid.GetComponent<SimplePathFinding2D>();
-        
+        roomType = typeof(Cabin);
+
         state = State.None;
 
         tileArray = new RuleTile[1000];
@@ -98,6 +102,8 @@ public class RoomEditor : MonoBehaviour
         switch (state)
         {
             case State.None:
+                pickRoomType();
+
                 if (Input.GetKeyDown(KeyCode.Space)) state = State.Build;
                 else if (Input.GetKeyDown(KeyCode.D)) state = State.AddDoor;
                 else if (SetRoomObjectPrefab()) state = State.AddObject;
@@ -120,6 +126,12 @@ public class RoomEditor : MonoBehaviour
         }
 
         lastMousePos = curMousePos;
+    }
+
+    void pickRoomType()
+    {
+        if (Input.GetKeyDown(KeyCode.Alpha1)) roomType = typeof(Cabin);
+        else if (Input.GetKeyDown(KeyCode.Alpha2)) roomType = typeof(Bathhouse);
     }
 
     void StartBuildRoom()
@@ -155,7 +167,7 @@ public class RoomEditor : MonoBehaviour
     void EndBuildRoom()
     {
         SetCollidersOnEdgeOfBound(curBounds);
-        room = roomMan.CreateRoom<Cabin>(curBounds);
+        room = roomMan.CreateRoom(roomType, curBounds);
         clickPos = Vector3Int.zero;
     }
 
@@ -256,8 +268,16 @@ public class RoomEditor : MonoBehaviour
     {
         if (room == null) return false;
         selectedObj = null;
-        if (Input.GetKeyDown(KeyCode.B)) selectedObj = bedPrefab;
-        else if (Input.GetKeyDown(KeyCode.T)) selectedObj = trunkPrefab;
+
+        if (room.GetType() == typeof(Cabin))
+        {
+            if (Input.GetKeyDown(KeyCode.B)) selectedObj = bedPrefab;
+            else if (Input.GetKeyDown(KeyCode.T)) selectedObj = trunkPrefab;
+        }
+        else if (room.GetType() == typeof(Bathhouse))
+        {
+            if (Input.GetKeyDown(KeyCode.T)) selectedObj = toiletPrefab;
+        }
         return selectedObj != null;
     }
 }

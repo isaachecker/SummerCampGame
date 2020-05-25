@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Trunk : RoomObject
+public class Toilet : RoomObject
 {
     public static List<Room.Type> GetAllowedRoomTypesSub()
     {
-        return new List<Room.Type> { Room.Type.Cabin };
+        return new List<Room.Type> { Room.Type.Bathhouse };
     }
 }
