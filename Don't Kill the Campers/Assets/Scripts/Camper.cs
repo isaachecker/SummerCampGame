@@ -13,6 +13,96 @@ public enum CamperState
 
 public class Camper : PathFollower
 {
+    #region Desires
+    #region Core Desires
+    const int numCoreDesires = 5;
+    Desire bathroom, eat, drink, health, bathe;
+    [SerializeField]
+    Desire[] coreDesires = new Desire[numCoreDesires];
+
+    private void initializeCoreDesires()
+    {
+        eat = new Desire(DesireType.eat, 1);
+        bathe = new Desire(DesireType.bathe, 1);
+        drink = new Desire(DesireType.drink, 1);
+        health = new Desire(DesireType.health, 1);
+        bathroom = new Desire(DesireType.bathroom, 1);
+        
+        coreDesires = new Desire[numCoreDesires] { eat, drink, health, bathe, bathroom };
+    }
+    #endregion
+
+    #region Ancillary Desires
+    //Ancillary desires
+    const int numAncDesires = 4;
+    [SerializeField]
+    Desire[] ancDesires = new Desire[numAncDesires];
+
+    private int chillDesireIdx = -1, musicDesireIdx = -1, communityDesireIdx = -1;
+    private int natureDesireIdx = -1, exerciseDesireIdx = -1, creativeDesireIdx = -1;
+    private int scienceDesireIdx = -1, educationDesireIdx = -1, spiritualityDesireIdx = -1;
+
+    private void initializeAncDesires()
+    {
+        List<DesireType> desireTypes = Desire.GetRandomAncDesireTypes(numAncDesires);
+        for (int i = 0; i < desireTypes.Count; i++)
+        {
+            DesireType type = desireTypes[i];
+            switch (type)
+            {
+                case DesireType.chill: chillDesireIdx = i; break;
+                case DesireType.music: musicDesireIdx = i; break;
+                case DesireType.nature: natureDesireIdx = i; break;
+                case DesireType.science: scienceDesireIdx = i; break;
+                case DesireType.exercise: exerciseDesireIdx = i; break;
+                case DesireType.creative: creativeDesireIdx = i; break;
+                case DesireType.community: communityDesireIdx = i; break;
+                case DesireType.education: educationDesireIdx = i; break;
+                case DesireType.spirituality: spiritualityDesireIdx = i; break;
+            }
+            ancDesires[i] = new Desire(type, 1);
+        }
+    }
+    #endregion
+    private void updateCoreDesires()
+    {
+        for (int i = 0; i < coreDesires.Length; i++)
+        {
+            coreDesires[i].IncrementAndDecrement();
+        }
+    }
+    private void updateAncDesires()
+    {
+        for (int i = 0; i < ancDesires.Length; i++)
+        {
+            ancDesires[i].IncrementAndDecrement();
+        }
+    }
+    private void updateDesires()
+    {
+        updateCoreDesires();
+        updateAncDesires();
+    }
+
+    private Desire GetAncDesire(DesireType type)
+    {
+        int idx = -1;
+        switch (type)
+        {
+            case DesireType.chill: idx = chillDesireIdx; break;
+            case DesireType.music: idx = musicDesireIdx; break;
+            case DesireType.community: idx = communityDesireIdx; break;
+            case DesireType.nature: idx = natureDesireIdx; break;
+            case DesireType.exercise: idx = exerciseDesireIdx; break;
+            case DesireType.creative: idx = creativeDesireIdx; break;
+            case DesireType.science: idx = scienceDesireIdx; break;
+            case DesireType.education: idx = educationDesireIdx; break;
+            case DesireType.spirituality: idx = spiritualityDesireIdx; break;
+        }
+        return idx > -1 ? ancDesires[idx] : null;
+    }
+    #endregion
+
     public enum ActionState
     {
         None,
@@ -52,11 +142,14 @@ public class Camper : PathFollower
     protected override void Start()
     {
         base.Start();
+        initializeCoreDesires();
+        initializeAncDesires();
     }
 
     protected void Update()
     {
         pathUpdate();
+        updateDesires();
         camperUpdate();
     }
 

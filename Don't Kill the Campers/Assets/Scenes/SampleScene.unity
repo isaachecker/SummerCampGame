@@ -765,7 +765,7 @@ GameObject:
   - component: {fileID: 1837054910}
   - component: {fileID: 1837054909}
   m_Layer: 0
-  m_Name: Agent
+  m_Name: Camper
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -785,6 +785,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 5
   distToTargetNextPoint: 0.1
+  coreDesires: []
+  ancDesires:
+  - name: none
+    value: 0
+  - name: none
+    value: 0
+  - name: none
+    value: 0
+  - name: none
+    value: 0
 --- !u!212 &1837054910
 SpriteRenderer:
   m_ObjectHideFlags: 0

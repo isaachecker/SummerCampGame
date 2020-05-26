@@ -43,4 +43,18 @@ public static class Controls
        // }
         return id;
     }
+
+    public static List<int> PickNumbersInRange(int numNumbers, int min, int max)
+    {
+        List<int> picked = new List<int>();
+        int numPossibilities = max - min + 1;
+        if (numPossibilities == 0) return picked;
+        if (numNumbers > numPossibilities) numNumbers = numPossibilities;
+        while (picked.Count < numNumbers)
+        {
+            int num = UnityEngine.Random.Range(min, max + 1);
+            if (!picked.Contains(num)) picked.Add(num);
+        }
+        return picked;
+    }
 }
