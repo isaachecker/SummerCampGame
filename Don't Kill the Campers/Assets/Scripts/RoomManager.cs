@@ -99,9 +99,9 @@ public class RoomManager : MonoBehaviour
     /// </summary>
     /// <typeparam name="T">The RoomObject object type</typeparam>
     /// <returns>A list of Rooms with the available RoomObject type</returns>
-    public List<Room> GetRoomsWithAvailableObjectType<T>() where T : RoomObject
+    public List<Room> GetRoomsWithAvailableObjectType<T>(RoomObjectType objType) where T : RoomObject
     {
-        List<Room.Type> roomTypes = RoomObject.GetAllowedRoomTypes<T>();
+        List<Room.Type> roomTypes = RoomObject.GetAllowedRoomTypes(objType);
         List<Room> roomList = new List<Room>();
         List<Room> returnList = new List<Room>();
         foreach (Room.Type type in roomTypes)
@@ -116,5 +116,22 @@ public class RoomManager : MonoBehaviour
             }
         }
         return returnList;
+    }
+
+    public bool CanDesireBeAddressed(DesireType desireType)
+    {
+        //TODO more intelligently loop through rooms, i.e. only rooms that could possibly contain the desire/object type
+        List<RoomObjectType> objTypes = RoomObject.GetObjectsImpactingDesireType(desireType);
+        for (int i = 0; i < allRooms.Count; i++)
+        {
+            for (int j = 0; j < allRooms[i].Count; j++)
+            {
+                for (int k = 0; k < objTypes.Count; k++)
+                {
+                    if (allRooms[i][j].ContainsObjectOfRoomObjectType(objTypes[k])) return true;
+                }   
+            }
+        }
+        return false;
     }
 }

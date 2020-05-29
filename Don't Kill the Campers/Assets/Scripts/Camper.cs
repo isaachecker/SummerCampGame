@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using SimplePF2D;
 
 public enum CamperState
 {
@@ -29,6 +30,14 @@ public class Camper : PathFollower
         bathroom = new Desire(DesireType.bathroom, 1);
         
         coreDesires = new Desire[numCoreDesires] { eat, drink, health, bathe, bathroom };
+    }
+    private void updateCoreDesires()
+    {
+        for (int i = 0; i < coreDesires.Length; i++)
+        {
+            coreDesires[i].IncrementAndDecrement();
+        }
+        //Debug.Log(bathroom.value);
     }
     #endregion
 
@@ -63,14 +72,6 @@ public class Camper : PathFollower
             ancDesires[i] = new Desire(type, 1);
         }
     }
-    #endregion
-    private void updateCoreDesires()
-    {
-        for (int i = 0; i < coreDesires.Length; i++)
-        {
-            coreDesires[i].IncrementAndDecrement();
-        }
-    }
     private void updateAncDesires()
     {
         for (int i = 0; i < ancDesires.Length; i++)
@@ -78,14 +79,24 @@ public class Camper : PathFollower
             ancDesires[i].IncrementAndDecrement();
         }
     }
+    #endregion
+
     private void updateDesires()
     {
         updateCoreDesires();
         updateAncDesires();
     }
 
-    private Desire GetAncDesire(DesireType type)
+    private Desire GetDesire(DesireType type)
     {
+        switch (type)
+        {
+            case DesireType.bathe: return bathe;
+            case DesireType.bathroom: return bathroom;
+            case DesireType.drink: return drink;
+            case DesireType.health: return health;
+            case DesireType.eat: return eat;
+        }
         int idx = -1;
         switch (type)
         {
@@ -130,18 +141,34 @@ public class Camper : PathFollower
         }
     }
 
-    private int sleepCount = 0, toiletCount = 0;
+    private List<RoomObject> objectsToTarget;
+    protected Room.RoomTarget roomTarget;
+    protected Dictionary<Room, Path> roomPathMap;
 
     private ActionState _actionState;
     public ActionState actionState
     {
         get { return _actionState; }
-        set { _actionState = value; }
+        set
+        {
+            if (_actionState == ActionState.MidAction)
+            {
+                EndRoomTargetDesireDecrement();
+            }
+            _actionState = value;
+            if (value == ActionState.MidAction)
+            {
+                roomTarget.GetInteractionPoint().StartTimeWithIP();
+                StartRoomTargetDesireDecrement();
+            }
+        }
     }
 
     protected override void Start()
     {
         base.Start();
+        objectsToTarget = new List<RoomObject>();
+        roomPathMap = new Dictionary<Room, Path>();
         initializeCoreDesires();
         initializeAncDesires();
     }
@@ -166,7 +193,9 @@ public class Camper : PathFollower
             case PathState.TravelingOnPath:
                 ContinueTravelingOnPath();
                 break;
-            case PathState.Arrived: break;
+            case PathState.Arrived:
+                ContinueArrived();
+                break;
             case PathState.UniqueAction:
                 ContinueUniqueAction();
                 break;
@@ -220,9 +249,8 @@ public class Camper : PathFollower
 
     private void MidSleepingState()
     {
-        if (++sleepCount > 500)
+        if (InteractionTimeIsComplete())
         {
-            sleepCount = 0;
             actionState = ActionState.PostAction;
         }
     }
@@ -238,7 +266,7 @@ public class Camper : PathFollower
         {
             actionState = ActionState.None;
             camperState = CamperState.None;
-            pathState = PathState.None;
+            SetPathStateNone();
         }
     }
     #endregion
@@ -274,9 +302,8 @@ public class Camper : PathFollower
 
     private void MidToiletState()
     {
-        if (++toiletCount > 500)
+        if (InteractionTimeIsComplete())
         {
-            toiletCount = 0;
             actionState = ActionState.PostAction;
         }
     }
@@ -292,39 +319,61 @@ public class Camper : PathFollower
         {
             actionState = ActionState.None;
             camperState = CamperState.None;
-            pathState = PathState.None;
+            SetPathStateNone();
         }
     }
     #endregion
 
+    #region Path State Overrides
     protected override void ContinueNoState()
     {
-        if (Input.GetKeyDown(KeyCode.P))
+        if (Input.GetKeyDown(KeyCode.Q))
         {
-            CreatePathToObject<Trunk>();
+            startMakeNextPath();
         }
-        else if (Input.GetKeyDown(KeyCode.L))
+    }
+
+    protected override void StartWaitingForPath()
+    {
+    }
+
+    protected override void ContinueWaitingForPath()
+    {
+        if (roomPathMap.Count > 0)
         {
-            CreatePathToObject<Bed>();
+            makeNextPath();
         }
-        else if(Input.GetKeyDown(KeyCode.M))
-        {
-            CreatePathToObject<Toilet>();
-        }
+    }
+
+    protected override void ContinueTravelingOnPath()
+    {
+        MoveAlongPath();
     }
 
     protected override void StartArrived()
     {
-        isStationary = true;
         NormalizePosition();
-        pathState = PathState.UniqueAction;
-    }
 
-    protected override void CreatePathToObject<T>()
-    {
-        pathState = PathState.WaitingForPath; //set this first to clear out roomTarget locks.
-        //could have problem if camper cannot find anywhere to go and has to stay here
-        pathMan.GetPathToRoomObject<T>(this);
+        if (roomTarget.targetingRoom)
+        {
+            InteractionPoint IP = roomTarget.GetInteractionPoint();
+            roomTarget.targetingRoom = false;
+            if (IP.ShouldQueueCamper())
+            {
+                IP.QueueCamper(this);
+                pathState = PathState.Idle;
+            }
+            else
+            {
+                IP.Lock();
+                path = IP.GetPath();
+                pathState = PathState.TravelingOnPath;
+            }
+        }
+        else
+        {
+            pathState = PathState.UniqueAction;
+        }
     }
 
     protected override void StartUniqueAction()
@@ -332,6 +381,189 @@ public class Camper : PathFollower
         if (roomTarget == null) return;
         camperState = roomTarget.obj.GetCamperStateOnUse();
     }
-    protected override void EndUniqueAction() { }
+    protected override void EndUniqueAction()
+    {
+        roomTarget.GetInteractionPoint().Unlock();
+    }
     protected override void ContinueUniqueAction() { }
+    #endregion
+
+    #region Pathfinding
+    private void clearPathfindingData()
+    {
+        if (roomTarget != null)
+        {
+            roomTarget.Clear();
+        }
+        path = null;
+        objectsToTarget.Clear();
+        roomPathMap.Clear();
+    }
+
+    /// <summary>
+    /// Starts a path to a RoomObject that will address the next Desire
+    /// </summary>
+    private void makeNextPath()
+    {
+        if (roomPathMap.Count == 0) return;
+        
+        float lowestScore = float.MaxValue;
+        int IPidx = -1;
+        RoomObject roomObj = null;
+        //get the score for each interaction point to determine the final target
+        foreach (RoomObject obj in objectsToTarget)
+        {
+            float baseScore = roomPathMap[obj.GetRoom()].GetPathLength();
+            for (int i = 0; i < obj.interactionPoints.Count; i++)
+            {
+                InteractionPoint ip = obj.interactionPoints[i];
+                float score = baseScore + ip.GetIPScore();
+
+                if (score < lowestScore)
+                {
+                    IPidx = i;
+                    roomObj = obj;
+                    lowestScore = score;
+                }
+            }
+        }
+        if (roomObj == null)
+        {
+            SetPathStateNone();
+            return; //TODO better handle
+        }
+        if (roomTarget == null) roomTarget = new Room.RoomTarget(roomObj.GetRoom(), roomObj, IPidx);
+        else roomTarget.Initialize(roomObj.GetRoom(), roomObj, IPidx);
+        path = roomPathMap[roomObj.GetRoom()]; //create path to the room, not to the IP
+
+        pathState = PathState.TravelingOnPath;
+    }
+
+    /// <summary>
+    /// Based on the next DesireType, selects a RoomObject that will address that Desire
+    /// </summary>
+    private void startMakeNextPath()
+    {
+        //call this first to start clean up old path info before making new one
+        clearPathfindingData();
+
+        DesireType desireType = getDesireTypeToAddress();
+        objectsToTarget = getRoomObjectsToTarget(desireType);
+        List<Room> roomsToTarget = RoomObject.GetRoomsOfRoomObjects(objectsToTarget);
+        pathMan.GetPathsToRooms(this, roomsToTarget);
+
+        pathState = PathState.WaitingForPath;
+    }
+
+    /// <summary>
+    /// Gets a list of the RoomObjects that will affect the current desireType
+    /// </summary>
+    /// <param name="desireType">The desire type that needs addressing</param>
+    /// <returns>A list of RoomObjects</returns>
+    private List<RoomObject> getRoomObjectsToTarget(DesireType desireType)
+    {
+        List<RoomObject> objs = RoomObject.GetRoomObjectsForDesireType(desireType);
+        //TODO filter RoomObjects as appropriate
+        return objs;
+    }
+
+    /// <summary>
+    /// Gets the next desire type that should be addressed
+    /// </summary>
+    /// <returns>The DesireType to address</returns>
+    private DesireType getDesireTypeToAddress()
+    {
+        Desire coreDesire = getDesireToAddress(coreDesires);
+        if (coreDesire.IsWanted()) return coreDesire.GetDesireType();
+
+        Desire ancDesire = getDesireToAddress(ancDesires);
+        return ancDesire.GetDesireType();
+    }
+
+    /// <summary>
+    /// Given an array of desires, gets the one of the highest value
+    /// </summary>
+    /// <param name="desireArr">The array of desires to pick from</param>
+    /// <returns>The Desire that should next be addressed</returns>
+    private Desire getDesireToAddress(Desire[] desireArr)
+    {
+        int largestIdx = -1;
+        float largestVal = 0;
+        bool wanted = false, needed = false;
+        for (int i = 0; i < desireArr.Length; i++)
+        {
+            if (needed && !desireArr[i].IsNeeded()) continue;
+            else if (wanted && !desireArr[i].IsWanted()) continue;
+            wanted = desireArr[i].IsWanted();
+            needed = desireArr[i].IsNeeded();
+            if (desireArr[i].value >= largestVal)
+            {
+                largestIdx = i;
+                largestVal = desireArr[i].value;
+            }
+        }
+        return desireArr[largestIdx];
+    }
+
+    /// <summary>
+    /// Start decrememnting the Desires that the roomTarget is addressing by setting their decrement speeds
+    /// </summary>
+    private void StartRoomTargetDesireDecrement()
+    {
+        RoomObject obj = roomTarget.obj;
+        List<Tuple<DesireType, int>> tuples = RoomObject.GetObjectDesireImpact(obj.GetRoomObjectType());
+        for (int i = 0; i < tuples.Count; i++)
+        {
+            Tuple<DesireType, int> tuple = tuples[i];
+            Desire desire = GetDesire(tuple.Item1);
+            desire.SetDecrementSpeed(tuple.Item2);
+        }
+    }
+
+    /// <summary>
+    /// Stop decrementing the Desires that the roomTarget is addressing
+    /// </summary>
+    private void EndRoomTargetDesireDecrement()
+    {
+        //TODO don't repeat StartRoomTargetDesireDecrement
+        RoomObject obj = roomTarget.obj;
+        List<Tuple<DesireType, int>> tuples = RoomObject.GetObjectDesireImpact(obj.GetRoomObjectType());
+        for (int i = 0; i < tuples.Count; i++)
+        {
+            Tuple<DesireType, int> tuple = tuples[i];
+            Desire desire = GetDesire(tuple.Item1);
+            desire.SetDecrementSpeed(0);
+        }
+    }
+
+    public void SetRoomPathMap(Dictionary<Room, Path> _roomPathMap)
+    {
+        roomPathMap = _roomPathMap;
+        if (roomPathMap.Count == 0)
+        {
+            Debug.Log("Could not make paths");
+            SetPathStateNone();
+            //TODO more handling if no paths were generated
+        }
+    }
+
+    public InteractionPoint GetTargetedInteractionPoint()
+    {
+        return roomTarget.GetInteractionPoint();
+    }
+
+    public void CreatePathToTargetedInteractionPoint()
+    {
+        Vector3 start = transform.position;
+        Vector3 end = roomTarget.GetInteractionPoint().GetEntryPointLocation();
+        CreatePath(start, end);
+
+        pathState = PathState.WaitingForPath;
+    }
+
+    public bool InteractionTimeIsComplete()
+    {
+        return roomTarget.GetInteractionPoint().GetRemainingTime() <= 0;
+    }
+    #endregion
 }

@@ -260,6 +260,8 @@ public class RoomEditor : MonoBehaviour
     void EndAddObject()
     {
         room.AddRoomObject(selectedObj);
+        selectedObj.InitializeRoomObject(room);
+        selectedObj.GenerateAllIPPaths(room.doorPos);
         SetColliderOnPoint(Controls.GetMousePosPF(), true);
         selectedObj = null;
     }

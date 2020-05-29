@@ -55,26 +55,32 @@ namespace SimplePF2D{
         }
 
         // Returns the list of path points.
-        public List<Vector3Int> GetPathPointList(){
+        public List<Vector3Int> GetPathPointList()
+        {
             return pathpoints;
         }
 
         // Returns the internal index in the path point list this path is on.
-        public int GetInternalPathPointIndex(){
+        public int GetInternalPathPointIndex()
+        {
             return internalindex;
         }
 
         // Returns the point the path's internal pointer is currently pointing at.
-        public Vector3Int GetPathPoint(){
-            if (internalindex < 0 || internalindex >= pathpoints.Count){
+        public Vector3Int GetPathPoint()
+        {
+            if (internalindex < 0 || internalindex >= pathpoints.Count)
+            {
                 return Vector3Int.zero;
             }
             return pathpoints[internalindex];
         }
 
         // Returns the point the passed in index points at. Does a range check.
-        public Vector3Int GetPathPoint(int index){
-            if (index < 0 || index >= pathpoints.Count) {
+        public Vector3Int GetPathPoint(int index)
+        {
+            if (index < 0 || index >= pathpoints.Count)
+            {
                 return Vector3Int.zero;
             }
             return pathpoints[index];
@@ -242,12 +248,12 @@ namespace SimplePF2D{
         /// <summary>
         /// Gets the length of this path by calculating the distance between all the points
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The length of the path</returns>
         public float GetPathLength()
         {
             if (pathLength > -1) return pathLength;
-            if (!IsGenerated()) return float.MaxValue;
-            else if (pathpoints.Count == 0) return 0;
+            if (!IsGenerated()) return -1;
+            else if (pathpoints.Count == 0) return -1;
 
             float dist = 0;
             Vector3Int lastPoint = pathpoints[0];

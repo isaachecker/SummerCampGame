@@ -3,76 +3,144 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum RoomObjectType
+{
+    none,
+    bed,
+    toilet,
+    trunk
+}
+
 public abstract class RoomObject : MonoBehaviour
 {
-    [Serializable]
-    protected class InteractionPoint
+    #region New Room Object Methods
+
+    public static List<Room.Type> GetAllowedRoomTypes(RoomObjectType objType)
     {
-        [SerializeField]
-        Vector3 center;
-        [SerializeField]
-        Vector2 interactionOffsetFromCenter;
-        [SerializeField]
-        Vector2 entryOffsetFromCenter;
-        bool isLocked = false;
-        bool? canBeAccessed;
-
-        public bool Lock()
+        switch (objType)
         {
-            if (isLocked) return false;
-            isLocked = true;
-            return true;
+            case RoomObjectType.bed: return Bed.SGetAllowedRoomTypes();
+            case RoomObjectType.toilet: return Toilet.SGetAllowedRoomTypes();
+            case RoomObjectType.trunk: return Trunk.GetAllowedRoomTypesSub();
         }
-        public bool Unlock()
-        {
-            if (!isLocked) return false;
-            isLocked = false;
-            return true;
-        }
-        public bool IsLocked()
-        {
-            return isLocked;
-        }
-
-        public bool IsAccessible()
-        {
-            if (canBeAccessed == null)
-            {
-                //generate a path to door. If path exists, set canBeAccessed to true
-            }
-            return canBeAccessed == true ? true : false; //for now, so no compiler errors
-        }
-
-        public Vector3 GetEntryPointLocation(Vector3 objPos)
-        {
-            objPos.x += entryOffsetFromCenter.x;
-            objPos.y += entryOffsetFromCenter.y;
-            return objPos;
-        }
-
-        public Vector3 GetInteractionPointLocation(Vector3 objPos)
-        {
-            objPos.x += interactionOffsetFromCenter.x;
-            objPos.y += interactionOffsetFromCenter.y;
-            return objPos;
-        }
+        return new List<Room.Type>();
     }
+
+    /// <summary>
+    /// Gets a list of tuples containing the Desires and Desire Impacts that a Room Object affects
+    /// </summary>
+    /// <param name="type">The type of Room Object</param>
+    /// <returns>a list of tuples containing the Desires and Desire Impacts that a Room Object affects</returns>
+    public static List<Tuple<DesireType, int>> GetObjectDesireImpact(RoomObjectType type)
+    {
+        switch (type)
+        {
+            case RoomObjectType.bed: return Bed.SGetObjectDesireImpact();
+            case RoomObjectType.toilet: return Toilet.SGetObjectDesireImpact();
+        }
+        return new List<Tuple<DesireType, int>>();
+    }
+
+    public static List<RoomObjectType> GetObjectsImpactingDesireType(DesireType desireType)
+    {
+        switch (desireType)
+        {
+            case DesireType.chill:
+                return new List<RoomObjectType>
+            {
+                RoomObjectType.bed
+            };
+            case DesireType.bathroom:
+                return new List<RoomObjectType>
+            {
+                RoomObjectType.toilet
+            };
+        }
+        return new List<RoomObjectType>();
+    }
+
+    #endregion
     
     [SerializeField]
-    private List<InteractionPoint> interactionPoints;
-    private string ID;
-    [SerializeField]
+    public List<InteractionPoint> interactionPoints { get; private set; }
+    [SerializeField] //Serialize so can choose in the Inspector
     protected CamperState toCamperState;
+    [SerializeField]
+    protected RoomObjectType type;
+    protected List<Tuple<DesireType, int>> desires;
+    protected Room room;
 
-    // Start is called before the first frame update
-    void Start()
+    protected static Dictionary<DesireType, List<RoomObject>> desireRoomObjectMap;
+
+    protected virtual void Start()
     {
-        ID = Controls.MakeRandomID(6);
+        if (desireRoomObjectMap == null)
+        {
+            desireRoomObjectMap = new Dictionary<DesireType, List<RoomObject>>();
+        }
+        for (int i = 0; i < desires.Count; i++)
+        {
+            DesireType desireType = desires[i].Item1;
+            if (!desireRoomObjectMap.ContainsKey(desireType))
+            {
+                desireRoomObjectMap[desireType] = new List<RoomObject>();
+            }
+            if (desireRoomObjectMap[desireType].Contains(this)) return;
+            desireRoomObjectMap[desireType].Add(this);
+        }
+
+        interactionPoints = new List<InteractionPoint>();
+        InteractionPoint[] IPs = transform.GetComponentsInChildren<InteractionPoint>();
+        for (int i = 0; i < IPs.Length; i++)
+        {
+            interactionPoints.Add(IPs[i]);
+        }
     }
 
-    public string GetID()
+    public void InitializeRoomObject(Room _room)
     {
-        return ID;
+        room = _room;
+        
+    }
+
+    public Room GetRoom()
+    {
+        return room;
+    }
+
+    public void GenerateAllIPPaths(Vector3 start)
+    {
+        foreach (InteractionPoint IP in interactionPoints)
+        {
+            IP.GeneratePathToEntryPoint(start);
+        }
+    }
+
+    protected virtual void OnDestroy()
+    {
+        for (int i = 0; i < desires.Count; i++)
+        {
+            DesireType desireType = desires[i].Item1;
+            if (desireRoomObjectMap[desireType].Contains(this)) desireRoomObjectMap[desireType].Remove(this);
+        }
+    }
+
+    public static List<RoomObject> GetRoomObjectsForDesireType(DesireType desireType)
+    {
+        if (desireRoomObjectMap == null) return new List<RoomObject>();
+        else if (desireRoomObjectMap[desireType] == null) return new List<RoomObject>();
+        return desireRoomObjectMap[desireType];
+    }
+
+    public static List<Room> GetRoomsOfRoomObjects(List<RoomObject> objs)
+    {
+        List<Room> rooms = new List<Room>();
+        foreach(RoomObject obj in objs)
+        {
+            Room room = obj.GetRoom();
+            if (!rooms.Contains(room)) rooms.Add(room);
+        }
+        return rooms;
     }
 
     public bool HasOpenInteractionPoint()
@@ -125,7 +193,7 @@ public abstract class RoomObject : MonoBehaviour
             Debug.LogError("Bad Interaction Point input");
             return Vector3.zero;
         }
-        return interactionPoints[index].GetEntryPointLocation(transform.position);
+        return interactionPoints[index].GetEntryPointLocation();
     }
 
     public Vector3 GetInteractionPointLocation(int index)
@@ -135,7 +203,7 @@ public abstract class RoomObject : MonoBehaviour
             Debug.LogError("Bad Interaction Point input");
             return Vector3.zero;
         }
-        return interactionPoints[index].GetInteractionPointLocation(transform.position);
+        return interactionPoints[index].transform.position;
     }
 
     public bool AreInteractionPointsAvailable()
@@ -147,17 +215,13 @@ public abstract class RoomObject : MonoBehaviour
         return false;
     }
 
-    public static List<Room.Type> GetAllowedRoomTypes<T>() where T : RoomObject
-    {
-        Type typeT = typeof(T);
-        if (typeT == typeof(Bed)) return Bed.GetAllowedRoomTypesSub();
-        else if (typeT == typeof(Trunk)) return Trunk.GetAllowedRoomTypesSub();
-        else if (typeT == typeof(Toilet)) return Toilet.GetAllowedRoomTypesSub();
-        return new List<Room.Type>();
-    }
-
     public CamperState GetCamperStateOnUse()
     {
         return toCamperState;
+    }
+
+    public virtual RoomObjectType GetRoomObjectType()
+    {
+        return RoomObjectType.none;
     }
 }

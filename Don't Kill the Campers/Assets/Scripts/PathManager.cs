@@ -6,44 +6,57 @@ using UnityEngine;
 
 public class PathManager : MonoBehaviour
 {
-    private class MultiRoomTargetPathFinder
+    private class MultiRoomPathFinder : IDisposable
     {
-        Path[] paths;
-        PathFollower pathFollower;
-        Type roomObjectType;
-        List<Room> rooms;
+        Camper camper;
         Vector3 startPoint;
         SimplePathFinding2D simpPF2D;
+        Dictionary<Room, Path> roomPathMap;
 
         //Constructor
-        public MultiRoomTargetPathFinder(PathFollower _pathFollower, List<Room> roomList, Type t)
+        public MultiRoomPathFinder(Camper _camper, List<Room> _rooms)
         {
-            pathFollower = _pathFollower;
-            startPoint = pathFollower.transform.position;
-            rooms = roomList;
-            roomObjectType = t;
+            Inizialize(_camper, _rooms);
+        }
 
-            simpPF2D = GameObject.Find("Grid").GetComponent<SimplePathFinding2D>();
-            paths = new Path[roomList.Count];
-            for (int i = 0; i < roomList.Count; i++)
+        public void Inizialize(Camper _camper, List<Room> _rooms)
+        {
+            camper = _camper;
+            startPoint = camper.transform.position;
+
+            if (simpPF2D == null) simpPF2D = GameObject.Find("Grid").GetComponent<SimplePathFinding2D>();
+            if (roomPathMap == null) roomPathMap = new Dictionary<Room, Path>();
+            for (int i = 0; i < _rooms.Count; i++)
             {
-                paths[i] = new Path(simpPF2D);
+                Path testPath = new Path(simpPF2D);
+                roomPathMap[_rooms[i]] = testPath;
             }
         }
 
         /// <summary>
-        /// Starts calculating all paths in paths
+        /// Starts calculating all paths to rooms in roomPathMap
         /// </summary>
         public void CalculatePaths()
         {
-            for (int i = 0; i < paths.Length; i++)
+            foreach (KeyValuePair<Room, Path> roomPath in roomPathMap)
             {
-                Vector3 doorPos = rooms[i].doorPos;
-                if (doorPos != Vector3.zero && doorPos != null)
+                Vector3 position = roomPath.Key.doorPos;
+                if (position != Vector3.zero && position != null)
                 {
-                    paths[i].CreatePath(startPoint, rooms[i].doorPos);
+                    roomPath.Value.CreatePath(startPoint, position);
                 }
             }
+        }
+
+        public void Clear()
+        {
+            camper = null;
+            startPoint = Vector3.zero;
+            roomPathMap.Clear();
+        }
+
+        public void Dispose()
+        {
         }
 
         /// <summary>
@@ -52,89 +65,62 @@ public class PathManager : MonoBehaviour
         /// <returns>True if all paths are generated. False otherwise</returns>
         public bool PathsAreGenerated()
         {
-            foreach(Path path in paths)
+            foreach (KeyValuePair<Room, Path> roomPath in roomPathMap)
             {
-                if (!path.IsGenerated()) return false;
+                if (!roomPath.Value.IsGenerated()) return false;
             }
             return true;
         }
 
-        /// <summary>
-        /// Will find the shortest path of all paths generated, and assign that
-        /// path and its related room and room object to the path follower.
-        /// </summary>
-        public void SetShortestPathData()
+        public void SetPathFollowerData()
         {
-            if (paths == null || paths.Length < 1)
-            {
-                pathFollower.CouldNotSetTarget();
-                return;
-            }
-            float shortestPath = float.MaxValue;
-            float length;
-            int indexOfShortest = 0, lockIndex = -1;
-            for (int i = 0; i < paths.Length; i++)
-            {
-                length = paths[i].GetPathLength();
-                if (length < shortestPath)
-                {
-                    shortestPath = length;
-                    indexOfShortest = i;
-                }
-            }
-            Room nearestRoom = rooms[indexOfShortest];
-            RoomObject obj = nearestRoom.LockAvailablePointOnObjectType(roomObjectType, ref lockIndex);
-            if (obj != null)
-            {
-                Room.RoomTarget roomTarget = new Room.RoomTarget(nearestRoom, obj, lockIndex);
-                pathFollower.SetRoomTarget(roomTarget);
-            }
-            else pathFollower.CouldNotSetTarget();
-
-            //don't set this here. Let pathfollower find path to exact object now that we have closest room
-            //pathFollower.SetPath(paths[indexOfShortest]);  
+            camper.SetRoomPathMap(roomPathMap);
         }
     }
 
-    private RoomManager roomMan;
-    private List<MultiRoomTargetPathFinder> multiRoomPathFinders;
+    private List<MultiRoomPathFinder> multiRoomPathFinders;
+    private List<MultiRoomPathFinder> toRemove;
+    private Queue<MultiRoomPathFinder> availableMRPFs;
 
     // Start is called before the first frame update
     void Start()
     {
-        roomMan = GameObject.Find("RoomManager").GetComponent<RoomManager>();
-        multiRoomPathFinders = new List<MultiRoomTargetPathFinder>();
+        multiRoomPathFinders = new List<MultiRoomPathFinder>();
+        toRemove = new List<MultiRoomPathFinder>();
+        availableMRPFs = new Queue<MultiRoomPathFinder>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        List<MultiRoomTargetPathFinder> toRemove = new List<MultiRoomTargetPathFinder>();
-        foreach (MultiRoomTargetPathFinder MRPF in multiRoomPathFinders)
+        if (toRemove.Count > 0) toRemove.Clear();
+
+        foreach (MultiRoomPathFinder MRPF in multiRoomPathFinders)
         {
             if (MRPF.PathsAreGenerated())
             {
-                MRPF.SetShortestPathData();
+                MRPF.SetPathFollowerData();
                 toRemove.Add(MRPF);
             }
         }
-        foreach(MultiRoomTargetPathFinder MRPF in toRemove)
+        foreach(MultiRoomPathFinder MRPF in toRemove)
         {
             multiRoomPathFinders.Remove(MRPF);
+            availableMRPFs.Enqueue(MRPF);
+            //MRPF.Dispose(); keep commented for now before testing occurs
         }
     }
 
-    /// <summary>
-    /// Passed a PathFollower and given a generic RoomObject type, this will find and assign
-    /// the path to a room object of that type in the nearest room that has one available.
-    /// </summary>
-    /// <typeparam name="T">RoomObject type</typeparam>
-    /// <param name="pathFollower">PathFollower object that will receive the shortest path</param>
-    public void GetPathToRoomObject<T>(PathFollower pathFollower) where T : RoomObject
+    private MultiRoomPathFinder getAvailableMRPF()
     {
-        List<Room> availableRoomList = roomMan.GetRoomsWithAvailableObjectType<T>();
-        MultiRoomTargetPathFinder MRPF =
-            new MultiRoomTargetPathFinder(pathFollower, availableRoomList, typeof(T));
+        if (availableMRPFs.Count == 0) return null;
+        return availableMRPFs.Dequeue();
+    }
+
+    public void GetPathsToRooms(Camper camper, List<Room> rooms)
+    {
+        MultiRoomPathFinder MRPF = getAvailableMRPF();
+        if (MRPF == null) MRPF = new MultiRoomPathFinder(camper, rooms);
         MRPF.CalculatePaths();
         multiRoomPathFinders.Add(MRPF);
     }

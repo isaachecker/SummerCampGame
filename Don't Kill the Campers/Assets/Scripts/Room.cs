@@ -10,17 +10,40 @@ public class Room
         public Room room;
         public RoomObject obj;
         public int objectInteractionIndex;
+        public bool targetingRoom;
+        private bool isCleared;
 
         public RoomTarget(Room _room, RoomObject _obj, int OII)
+        {
+            Initialize(_room, _obj, OII);
+        }
+
+        public void Initialize(Room _room, RoomObject _obj, int OII)
         {
             room = _room;
             obj = _obj;
             objectInteractionIndex = OII;
+            targetingRoom = true;
+            isCleared = false;
         }
 
         public bool UnlockInteractionPoint()
         {
             return obj.UnlockInteractionPoint(objectInteractionIndex);
+        }
+
+        public InteractionPoint GetInteractionPoint()
+        {
+            if (isCleared) return null;
+            return obj.interactionPoints[objectInteractionIndex];
+        }
+
+        public void Clear()
+        {
+            room = null;
+            obj = null;
+            objectInteractionIndex = -1;
+            isCleared = true;
         }
     }
 
@@ -33,15 +56,21 @@ public class Room
     private BoundsInt bounds;
     public Vector3Int doorPos { get; private set; }
     protected bool needsDoor;
-    public string ID { get; private set; }
 
     private List<RoomObject> objectList;
 
     public Room(BoundsInt _bounds)
     {
-        ID = Controls.MakeRandomID(6);
         bounds = _bounds;
         objectList = new List<RoomObject>();
+    }
+
+    public void GenerateAllRoomObjectIPPaths()
+    {
+        foreach(RoomObject obj in objectList)
+        {
+            obj.GenerateAllIPPaths(doorPos);
+        }
     }
 
     public void AddDoor(Vector3Int newDoorPosition)
@@ -114,5 +143,14 @@ public class Room
             }
         }
         return null;
+    }
+
+    public bool ContainsObjectOfRoomObjectType(RoomObjectType objType)
+    {
+        for (int i = 0; i < objectList.Count; i++)
+        {
+            if (objectList[i].GetRoomObjectType() == objType) return true;
+        }
+        return false;
     }
 }

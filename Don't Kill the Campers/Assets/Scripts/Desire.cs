@@ -16,9 +16,8 @@ public class Desire
 {
     public string name;
     private DesireType type;
-    [Range(0, 100)]
     [SerializeField]
-    private float value = 0;
+    public float value { get; private set; }
     private float incSpeed;
     private float incSpeedMult;
     private float decSpeed;
@@ -27,6 +26,7 @@ public class Desire
 
     public Desire()
     {
+        value = 0;
         type = DesireType.none;
         name = type.ToString();
         incSpeed = 1;
@@ -35,6 +35,7 @@ public class Desire
 
     public Desire(DesireType _type, float _incSpeed)
     {
+        value = 0;
         type = _type;
         name = type.ToString();
         incSpeed = _incSpeed;
@@ -63,6 +64,7 @@ public class Desire
 
     public bool IsWanted() { return value >= wantValue; }
     public bool IsNeeded() { return value >= needValue; }
+
     public void SetDecrementSpeed(float speed)
     {
         decSpeed = speed;
