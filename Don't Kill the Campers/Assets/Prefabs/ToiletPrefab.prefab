@@ -142,5 +142,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   entryOffsetFromCenter: {x: 0, y: -1}
-  defaultTimeOfInteraction: 15
+  defaultTimeOfInteraction: 6
   startTime: 0
+  timeRemainingScoreMultiplier: 6

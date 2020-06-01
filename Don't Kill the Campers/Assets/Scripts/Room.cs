@@ -10,7 +10,6 @@ public class Room
         public Room room;
         public RoomObject obj;
         public int objectInteractionIndex;
-        public bool targetingRoom;
         private bool isCleared;
 
         public RoomTarget(Room _room, RoomObject _obj, int OII)
@@ -23,7 +22,6 @@ public class Room
             room = _room;
             obj = _obj;
             objectInteractionIndex = OII;
-            targetingRoom = true;
             isCleared = false;
         }
 

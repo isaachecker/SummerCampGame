@@ -15,6 +15,8 @@ public class InteractionPoint : MonoBehaviour
     private Queue<Camper> campersQueued;
     private List<Camper> campersEnRoute;
     private RoomObject parentRoomObject;
+    [SerializeField]
+    private float timeRemainingScoreMultiplier = 6;
 
     private void Start()
     {
@@ -62,7 +64,10 @@ public class InteractionPoint : MonoBehaviour
         if (isLocked == camper) return true;
         if (isLocked != null) return false;
         isLocked = camper;
+
         //TODO make all campers enroute reconsider their life choices
+        recalculateEnRouteCamperPaths();
+
         return true;
     }
     public bool Unlock(Camper camper)
@@ -101,6 +106,20 @@ public class InteractionPoint : MonoBehaviour
         return pos;
     }
 
+    private void recalculateEnRouteCamperPaths()
+    {
+        List<Camper> tempList = new List<Camper>();
+        foreach (Camper camper in campersEnRoute)
+        {
+            tempList.Add(camper);
+        }
+        campersEnRoute.Clear();
+        foreach(Camper camper in tempList)
+        {
+            camper.RecalculatePotentialPaths();
+        }
+    }
+
     /// <summary>
     /// Calculates the score for this interaction point to determine its availability
     /// </summary>
@@ -118,8 +137,8 @@ public class InteractionPoint : MonoBehaviour
     /// <returns>The Wait Score</returns>
     public float GetWaitScore()
     {
-        float remainingTimeAdjusted = GetRemainingTime() * 4; //4 is arbitrary for now
-        float timeToCompAdjusted = defaultTimeOfInteraction * 4; //4 is arbitrary for now
+        float remainingTimeAdjusted = GetRemainingTime() * timeRemainingScoreMultiplier;
+        float timeToCompAdjusted = defaultTimeOfInteraction * timeRemainingScoreMultiplier;
         float queuedTime = timeToCompAdjusted + GetPathLength();
         float queuedScore = queuedTime * campersQueued.Count;
         if (IsLocked() && startTime == 0)

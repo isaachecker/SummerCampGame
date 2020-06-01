@@ -40,17 +40,20 @@ namespace SimplePF2D{
         }
 
         // Manually sets the current path point index.
-        public void SetPathPointIndex(int index){
+        public void SetPathPointIndex(int index)
+        {
            internalindex = Mathf.Clamp(index, 0, pathpoints.Count);
         }
 
         // Sets the current index of the path to the start.
-        public void SetPathStart() {
+        public void SetPathStart()
+        {
             internalindex = 0;
         }
 
         // Sets the current index of the path to the end.
-        public void SetPathEnd() {
+        public void SetPathEnd()
+        {
             internalindex = pathpoints.Count - 1;
         }
 
@@ -147,7 +150,8 @@ namespace SimplePF2D{
         }
 
         // Returns the next point in the list based on the internal pointer of the path.
-        public bool GetNextPoint(ref Vector3 nextPoint){
+        public bool GetNextPoint(ref Vector3 nextPoint)
+        {
             return GetNextPointIndex(ref nextPoint, ref internalindex);
         }
 
@@ -155,8 +159,8 @@ namespace SimplePF2D{
         // This point is returned by reference as a world position (previousPoint). Returns true if there is a valid next point.
         // If it reaches the end or the path has failed it returns false.
         // If the next point in the point list is blocked a new path is generated.
-        public bool GetPreviousPointIndex(ref Vector3 previousPoint, ref int index){
-
+        public bool GetPreviousPointIndex(ref Vector3 previousPoint, ref int index)
+        {
             // We couldn't generate a path OR we are still waiting for a path.
             if (!IsGenerated()){
                 return false;
@@ -186,7 +190,8 @@ namespace SimplePF2D{
         }
 
         // Returns the previous point in the list based on the internal pointer of the path.
-        public bool GetPreviousPoint(ref Vector3 previousPoint) {
+        public bool GetPreviousPoint(ref Vector3 previousPoint)
+        {
             return GetPreviousPointIndex(ref previousPoint, ref internalindex);
         }
 
@@ -263,6 +268,42 @@ namespace SimplePF2D{
             }
             pathLength = dist;
             return pathLength;
+        }
+
+        /// <summary>
+        /// Appends an input path to the end of this path if the start point of the input
+        /// path and end point of this path are the same
+        /// </summary>
+        /// <param name="path">The path to append to this path</param>
+        /// <returns>True if the append was successful. False otherwise.</returns>
+        public bool AppendPathToEnd(Path path)
+        {
+            if (!IsGenerated() || !path.IsGenerated())
+            {
+                Debug.LogWarning("Could not append paths because one of the paths is not generated");
+                return false;
+            }
+            List<Vector3Int> newPoints = path.GetPathPointList();
+            if (newPoints.Count == 0)
+            {
+                Debug.LogWarning("Could not append paths because the new end points have no values");
+                return false;
+            }
+            if (newPoints[0] != pathpoints[pathpoints.Count - 1])
+            {
+                Debug.LogError("Could not append paths because the old end point and new start point are not equal");
+                return false;
+            }
+            for (int i = 1; i < newPoints.Count; i++)
+            {
+                pathpoints.Add(newPoints[i]);
+            }
+            if (pathLength > -1)
+            {
+                pathLength = -1;
+                GetPathLength();
+            }
+            return true;
         }
     }
 }

@@ -15,6 +15,7 @@ public enum CamperState
 public class Camper : PathFollower
 {
     #region Desires
+    DesireType nextDesireType;
     #region Core Desires
     const int numCoreDesires = 5;
     Desire bathroom, eat, drink, health, bathe;
@@ -333,7 +334,7 @@ public class Camper : PathFollower
     {
         if (Input.GetKeyDown(KeyCode.Q))
         {
-            startMakeNextPath();
+            startMakeNextPath(true);
         }
     }
 
@@ -362,44 +363,24 @@ public class Camper : PathFollower
     {
         NormalizePosition();
 
-        if (roomTarget.targetingRoom)
+        InteractionPoint IP = roomTarget.GetInteractionPoint();
+        IP.RemoveCamperEnRoute(this);
+        if (IP.Lock(this))
         {
-            InteractionPoint IP = roomTarget.GetInteractionPoint();
-            roomTarget.targetingRoom = false;
-            if (IP.ShouldQueueCamper())
-            {
-                IP.QueueCamper(this);
-                pathState = PathState.Idle;
-            }
-            else
-            {
-                if (IP.Lock(this))
-                {
-                    path = IP.GetPath();
-                    pathState = PathState.TravelingOnPath;
-                }
-                else
-                {
-                    pathState = PathState.None;
-                }
-            }
+            pathState = PathState.UniqueAction;
+        }
+        else if (IP.ShouldQueueCamper())
+        {
+            IP.QueueCamper(this);
+            pathState = PathState.Idle;
+        }
+        else if (IP.Lock(this))
+        {
+            pathState = PathState.UniqueAction;
         }
         else
         {
-            InteractionPoint IP = roomTarget.GetInteractionPoint();
-            if (IP.Lock(this))
-            {
-                pathState = PathState.UniqueAction;
-            }
-            else if (IP.ShouldQueueCamper())
-            {
-                IP.QueueCamper(this);
-                pathState = PathState.Idle;
-            }
-            else
-            {
-                pathState = PathState.None;
-            }
+            pathState = PathState.None;
         }
     }
 
@@ -485,14 +466,16 @@ public class Camper : PathFollower
         //create a path to the room, not the IP
         if (useIPmap)
         {
-            roomTarget.targetingRoom = false; //targeting IP in current room
             path = IPpathMap[targetObj.interactionPoints[IPidx]];
+            roomTarget.GetInteractionPoint().AddCamperEnRoute(this);
         }
         //create a path to the IP
         else
         {
-            roomTarget.targetingRoom = true;
             path = roomPathMap[targetObj.GetRoom()];
+            //append the IP path so we go straight to that
+            path.AppendPathToEnd(roomTarget.GetInteractionPoint().GetPath());
+            roomTarget.GetInteractionPoint().AddCamperEnRoute(this);
         }
 
         pathState = PathState.TravelingOnPath;
@@ -562,27 +545,37 @@ public class Camper : PathFollower
         return useIPmap;
     }
 
+    public void RecalculatePotentialPaths()
+    {
+        startMakeNextPath(false);
+    }
+
     /// <summary>
     /// Based on the next DesireType, selects a RoomObject that will address that Desire
     /// </summary>
-    private void startMakeNextPath()
+    /// <param name="selectNewDesire">True if you want to select a new desire type to address.
+    ///                               False to use last desire type</param>
+    private void startMakeNextPath(bool selectNewDesire = true)
     {
         //call this first to start clean up old path info before making new one
         clearPathfindingData();
 
         //Get next desire type to address
-        DesireType desireType = getDesireTypeToAddress();
+        if (selectNewDesire || nextDesireType == DesireType.none)
+        {
+            nextDesireType = getDesireTypeToAddress();
+        }
 
         //Get objects that can address this desire type
-        objectsToTarget = getRoomObjectsToTarget(desireType);
+        objectsToTarget = getRoomObjectsToTarget(nextDesireType);
 
         //Get the rooms that house those objects
         List<Room> roomsToTarget = RoomObject.GetRoomsOfRoomObjects(objectsToTarget);
         Room currentRoom = roomMan.GetRoomWithPoint(Controls.GetPosAsVector3Int(transform));
-        List<RoomObject> objectsToTargetInCurrentRoom = new List<RoomObject>();
 
         //If we are already in one of the rooms with those objects, remove them from the room list,
         //and add the object to the object list
+        List<RoomObject> objectsToTargetInCurrentRoom = new List<RoomObject>();
         if (currentRoom != null && roomsToTarget.Contains(currentRoom))
         {
             roomsToTarget.Remove(currentRoom);

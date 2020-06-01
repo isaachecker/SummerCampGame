@@ -96,7 +96,7 @@ public class RoomEditor : MonoBehaviour
 
     // Update is called once per frame
     void Update()
-    { 
+    {
         curMousePos = Controls.GetMousePos();
 
         switch (state)
