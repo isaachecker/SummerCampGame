@@ -27,11 +27,6 @@ public class Room
             isCleared = false;
         }
 
-        public bool UnlockInteractionPoint()
-        {
-            return obj.UnlockInteractionPoint(objectInteractionIndex);
-        }
-
         public InteractionPoint GetInteractionPoint()
         {
             if (isCleared) return null;
@@ -112,37 +107,6 @@ public class Room
             }
         }
         return false;
-    }
-
-    public int LockAvailableObjectType<T>()
-    {
-        int indexVal = -1;
-        foreach (RoomObject obj in objectList)
-        {
-            if (obj.GetType() == typeof(T) && obj.AreInteractionPointsAvailable())
-            {
-                indexVal = obj.LockOpenInteractionPoint();
-                if (indexVal > -1) break;
-            }
-        }
-        return indexVal;
-    }
-
-    public RoomObject LockAvailablePointOnObjectType(System.Type t, ref int lockIndex)
-    {
-        lockIndex = -1;
-        foreach (RoomObject obj in objectList)
-        {
-            if (obj.GetType() == t && obj.AreInteractionPointsAvailable())
-            {
-                lockIndex = obj.LockOpenInteractionPoint();
-                if (lockIndex > -1)
-                {
-                    return obj;
-                }
-            }
-        }
-        return null;
     }
 
     public bool ContainsObjectOfRoomObjectType(RoomObjectType objType)

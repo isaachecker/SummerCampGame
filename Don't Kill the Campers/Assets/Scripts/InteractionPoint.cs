@@ -7,19 +7,14 @@ public class InteractionPoint : MonoBehaviour
 {
     [SerializeField]
     Vector2 entryOffsetFromCenter;
-    bool isLocked = false;
+    Camper isLocked = null;
     bool? canBeAccessed;
     Path path;
-    public float defaultTimeOfInteraction = 5; //arbitrary for testing
+    public float defaultTimeOfInteraction = 30; //arbitrary for testing
     public float startTime;
     private Queue<Camper> campersQueued;
     private List<Camper> campersEnRoute;
     private RoomObject parentRoomObject;
-
-    private void Update()
-    {
-        Debug.Log(transform.ToString() + " " + IsLocked());
-    }
 
     private void Start()
     {
@@ -62,22 +57,26 @@ public class InteractionPoint : MonoBehaviour
         return path;
     }
 
-    public bool Lock()
+    public bool Lock(Camper camper)
     {
-        if (isLocked) return false;
-        isLocked = true;
+        if (isLocked == camper) return true;
+        if (isLocked != null) return false;
+        isLocked = camper;
+        //TODO make all campers enroute reconsider their life choices
         return true;
     }
-    public bool Unlock()
+    public bool Unlock(Camper camper)
     {
-        if (!isLocked) return false;
-        isLocked = false;
+        if (isLocked == null) return false;
+        if (isLocked != camper) return false;
+        isLocked = null;
+        startTime = 0;
         DequeueCamper();
         return true;
     }
     public bool IsLocked()
     {
-        return isLocked;
+        return isLocked != null;
     }
 
     public bool IsAccessible()
@@ -119,28 +118,50 @@ public class InteractionPoint : MonoBehaviour
     /// <returns>The Wait Score</returns>
     public float GetWaitScore()
     {
-        float remainingTimeAdjusted = GetRemainingTime() * 2; //2 is arbitrary for now
-        float timeToCompAdjusted = defaultTimeOfInteraction * 2; //2 is arbitrary for now
-        float queuedScore = (timeToCompAdjusted + GetPathLength()) * campersQueued.Count;
+        float remainingTimeAdjusted = GetRemainingTime() * 4; //4 is arbitrary for now
+        float timeToCompAdjusted = defaultTimeOfInteraction * 4; //4 is arbitrary for now
+        float queuedTime = timeToCompAdjusted + GetPathLength();
+        float queuedScore = queuedTime * campersQueued.Count;
+        if (IsLocked() && startTime == 0)
+        {
+            //a camper is on the way but isn't here yet
+            queuedScore += queuedTime;
+        }
         return remainingTimeAdjusted + queuedScore;
     }
 
+    /// <summary>
+    /// Adds a camper to a list of campers heading for this interaction point
+    /// </summary>
+    /// <param name="camper">The camper</param>
     public void AddCamperEnRoute(Camper camper)
     {
         if (!campersEnRoute.Contains(camper)) campersEnRoute.Add(camper);
     }
 
+    /// <summary>
+    /// Removes a camper from the list of campers heading to this IP
+    /// </summary>
+    /// <param name="camper">The camper to remove</param>
     public void RemoveCamperEnRoute(Camper camper)
     {
         campersEnRoute.Remove(camper);
     }
 
+    /// <summary>
+    /// Determines if a camper should be queued to interact with this IP
+    /// </summary>
+    /// <returns>True if there are other campers queued or if this IP is locked. False otherwise.</returns>
     public bool ShouldQueueCamper()
     {
         if (campersQueued.Count > 0) return true;
         return IsLocked();
     }
 
+    /// <summary>
+    /// Queues a camper to use this IP
+    /// </summary>
+    /// <param name="camper">The camper to add</param>
     public void QueueCamper(Camper camper)
     {
         campersQueued.Enqueue(camper);
@@ -167,13 +188,21 @@ public class InteractionPoint : MonoBehaviour
         return camper;
     }
 
+    /// <summary>
+    /// Sets that start time of a camper using an interaction point
+    /// </summary>
     public void StartTimeWithIP()
     {
         startTime = Time.time;
     }
 
+    /// <summary>
+    /// Gets the remaining time a camper has with an interaction point
+    /// </summary>
+    /// <returns>The remaining time as a float</returns>
     public float GetRemainingTime()
     {
+        if (startTime == 0) return 0;
         return Mathf.Max(startTime + defaultTimeOfInteraction - Time.time, 0);
     }
 }

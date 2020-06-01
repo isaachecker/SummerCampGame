@@ -44,17 +44,32 @@ public static class Controls
         return id;
     }
 
+    /// <summary>
+    /// Creates a list of non-repeating random integers between two values (inclusive)
+    /// </summary>
+    /// <param name="numNumbers">The number of integers to put into the list</param>
+    /// <param name="min">The minimum number to add to the list (inclusive)</param>
+    /// <param name="max">The maximum number to add to the list (inclusive)</param>
+    /// <returns>A list of integers</returns>
     public static List<int> PickNumbersInRange(int numNumbers, int min, int max)
     {
+        max = max + 1;
         List<int> picked = new List<int>();
-        int numPossibilities = max - min + 1;
+        int numPossibilities = max - min;
         if (numPossibilities == 0) return picked;
         if (numNumbers > numPossibilities) numNumbers = numPossibilities;
         while (picked.Count < numNumbers)
         {
-            int num = UnityEngine.Random.Range(min, max + 1);
+            int num = UnityEngine.Random.Range(min, max);
             if (!picked.Contains(num)) picked.Add(num);
         }
         return picked;
+    }
+
+    public static Vector3Int GetPosAsVector3Int(Transform trans)
+    {
+        return new Vector3Int(Mathf.FloorToInt(trans.position.x),
+                              Mathf.FloorToInt(trans.position.y),
+                              Mathf.FloorToInt(trans.position.z));
     }
 }

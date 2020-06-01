@@ -79,6 +79,7 @@ public class RoomManager : MonoBehaviour
     public Room GetRoomWithPoint(Vector3Int point)
     {
         BoundsInt bounds;
+        point.z = Controls.GetTileZ();
         foreach (List<Room> roomList in allRooms)
         {
             foreach (Room room in roomList)

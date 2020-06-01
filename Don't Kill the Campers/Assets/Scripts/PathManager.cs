@@ -12,51 +12,73 @@ public class PathManager : MonoBehaviour
         Vector3 startPoint;
         SimplePathFinding2D simpPF2D;
         Dictionary<Room, Path> roomPathMap;
+        Dictionary<InteractionPoint, Path> IPpathMap;
 
         //Constructor
-        public MultiRoomPathFinder(Camper _camper, List<Room> _rooms)
+        public MultiRoomPathFinder(Camper _camper, List<Room> _rooms, List<RoomObject> _objects)
         {
-            Inizialize(_camper, _rooms);
+            Inizialize(_camper, _rooms, _objects);
         }
 
-        public void Inizialize(Camper _camper, List<Room> _rooms)
+        /// <summary>
+        /// Sets up the MRPF
+        /// </summary>
+        /// <param name="_camper">The camper</param>
+        /// <param name="_rooms">The rooms to find paths to</param>
+        /// <param name="_objects">The _objects to find paths to</param>
+        public void Inizialize(Camper _camper, List<Room> _rooms, List<RoomObject> _objects)
         {
             camper = _camper;
             startPoint = camper.transform.position;
-
             if (simpPF2D == null) simpPF2D = GameObject.Find("Grid").GetComponent<SimplePathFinding2D>();
+
+            //set up the room paths
             if (roomPathMap == null) roomPathMap = new Dictionary<Room, Path>();
-            for (int i = 0; i < _rooms.Count; i++)
+            foreach (Room room in _rooms)
             {
-                Path testPath = new Path(simpPF2D);
-                roomPathMap[_rooms[i]] = testPath;
+                roomPathMap[room] = new Path(simpPF2D);
+            }
+
+            //set up the IP paths
+            if (IPpathMap == null) IPpathMap = new Dictionary<InteractionPoint, Path>();
+            foreach (RoomObject obj in _objects)
+            {
+                foreach (InteractionPoint IP in obj.interactionPoints)
+                {
+                    IPpathMap[IP] = new Path(simpPF2D);
+                }
             }
         }
 
         /// <summary>
-        /// Starts calculating all paths to rooms in roomPathMap
+        /// Starts calculating all paths to rooms in roomPathMap and paths to IPs in IPpathMap
         /// </summary>
         public void CalculatePaths()
         {
             foreach (KeyValuePair<Room, Path> roomPath in roomPathMap)
             {
                 Vector3 position = roomPath.Key.doorPos;
-                if (position != Vector3.zero && position != null)
+                if (position != null && position != Vector3.zero)
                 {
                     roomPath.Value.CreatePath(startPoint, position);
                 }
             }
-        }
-
-        public void Clear()
-        {
-            camper = null;
-            startPoint = Vector3.zero;
-            roomPathMap.Clear();
+            foreach (KeyValuePair<InteractionPoint, Path> IPpath in IPpathMap)
+            {
+                Vector3 position = IPpath.Key.GetEntryPointLocation();
+                if (position != null && position != Vector3.zero)
+                {
+                    IPpath.Value.CreatePath(startPoint, position);
+                }
+            }
         }
 
         public void Dispose()
         {
+            camper = null;
+            startPoint = Vector3.zero;
+            roomPathMap = null;
+            IPpathMap = null;
         }
 
         /// <summary>
@@ -69,12 +91,16 @@ public class PathManager : MonoBehaviour
             {
                 if (!roomPath.Value.IsGenerated()) return false;
             }
+            foreach (KeyValuePair<InteractionPoint, Path> IPpath in IPpathMap)
+            {
+                if (!IPpath.Value.IsGenerated()) return false;
+            }
             return true;
         }
 
         public void SetPathFollowerData()
         {
-            camper.SetRoomPathMap(roomPathMap);
+            camper.SetPathMaps(roomPathMap, IPpathMap);
         }
     }
 
@@ -93,8 +119,7 @@ public class PathManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (toRemove.Count > 0) toRemove.Clear();
-
+        //for each MRFP, check if all paths have been generated
         foreach (MultiRoomPathFinder MRPF in multiRoomPathFinders)
         {
             if (MRPF.PathsAreGenerated())
@@ -103,24 +128,43 @@ public class PathManager : MonoBehaviour
                 toRemove.Add(MRPF);
             }
         }
-        foreach(MultiRoomPathFinder MRPF in toRemove)
+        //Stop checking values for MRPFs that are no longer being used
+        if (toRemove.Count > 0)
         {
-            multiRoomPathFinders.Remove(MRPF);
-            availableMRPFs.Enqueue(MRPF);
-            //MRPF.Dispose(); keep commented for now before testing occurs
+            foreach (MultiRoomPathFinder MRPF in toRemove)
+            {
+                multiRoomPathFinders.Remove(MRPF);
+                MRPF.Dispose();
+                availableMRPFs.Enqueue(MRPF);
+            }
+            toRemove.Clear();
         }
     }
 
+    /// <summary>
+    /// Retrieves an MRPF that is no longer in use, if any are available
+    /// </summary>
+    /// <returns></returns>
     private MultiRoomPathFinder getAvailableMRPF()
     {
         if (availableMRPFs.Count == 0) return null;
         return availableMRPFs.Dequeue();
     }
 
-    public void GetPathsToRooms(Camper camper, List<Room> rooms)
+
+    public void GetPathsToRoomsAndObjects(Camper camper, List<Room> rooms, List<RoomObject> objects)
     {
         MultiRoomPathFinder MRPF = getAvailableMRPF();
-        if (MRPF == null) MRPF = new MultiRoomPathFinder(camper, rooms);
+
+        if (MRPF == null)
+        {
+            MRPF = new MultiRoomPathFinder(camper, rooms, objects);
+        }
+        else
+        {
+            MRPF.Inizialize(camper, rooms, objects);
+        }
+
         MRPF.CalculatePaths();
         multiRoomPathFinders.Add(MRPF);
     }

@@ -144,6 +144,8 @@ public class Camper : PathFollower
     private List<RoomObject> objectsToTarget;
     protected Room.RoomTarget roomTarget;
     protected Dictionary<Room, Path> roomPathMap;
+    protected Dictionary<InteractionPoint, Path> IPpathMap;
+    protected RoomManager roomMan;
 
     private ActionState _actionState;
     public ActionState actionState
@@ -169,6 +171,8 @@ public class Camper : PathFollower
         base.Start();
         objectsToTarget = new List<RoomObject>();
         roomPathMap = new Dictionary<Room, Path>();
+        IPpathMap = new Dictionary<InteractionPoint, Path>();
+        roomMan = GameObject.Find("RoomManager").GetComponent<RoomManager>();
         initializeCoreDesires();
         initializeAncDesires();
     }
@@ -339,9 +343,13 @@ public class Camper : PathFollower
 
     protected override void ContinueWaitingForPath()
     {
-        if (roomPathMap.Count > 0)
+        if (roomPathMap.Count > 0 || IPpathMap.Count > 0)
         {
-            makeNextPath();
+            pickNextPath();
+        }
+        else if (path != null && path.IsGenerated())
+        {
+            pathState = PathState.TravelingOnPath;
         }
     }
 
@@ -365,14 +373,33 @@ public class Camper : PathFollower
             }
             else
             {
-                IP.Lock();
-                path = IP.GetPath();
-                pathState = PathState.TravelingOnPath;
+                if (IP.Lock(this))
+                {
+                    path = IP.GetPath();
+                    pathState = PathState.TravelingOnPath;
+                }
+                else
+                {
+                    pathState = PathState.None;
+                }
             }
         }
         else
         {
-            pathState = PathState.UniqueAction;
+            InteractionPoint IP = roomTarget.GetInteractionPoint();
+            if (IP.Lock(this))
+            {
+                pathState = PathState.UniqueAction;
+            }
+            else if (IP.ShouldQueueCamper())
+            {
+                IP.QueueCamper(this);
+                pathState = PathState.Idle;
+            }
+            else
+            {
+                pathState = PathState.None;
+            }
         }
     }
 
@@ -383,60 +410,156 @@ public class Camper : PathFollower
     }
     protected override void EndUniqueAction()
     {
-        roomTarget.GetInteractionPoint().Unlock();
+        roomTarget.GetInteractionPoint().Unlock(this);
     }
     protected override void ContinueUniqueAction() { }
     #endregion
 
     #region Pathfinding
+    /// <summary>
+    /// Clears out pathfinding data
+    /// </summary>
     private void clearPathfindingData()
     {
         if (roomTarget != null)
         {
+            roomTarget.GetInteractionPoint().Unlock(this);
             roomTarget.Clear();
         }
-        path = null;
-        objectsToTarget.Clear();
+        if (objectsToTarget != null)
+        {
+            //set to null, do not clear since this references a static list
+            objectsToTarget = null; 
+        }
+        path.Reset();
+        clearPathMaps();
+    }
+
+    private void clearPathMaps()
+    {
         roomPathMap.Clear();
+        IPpathMap.Clear();
     }
 
     /// <summary>
-    /// Starts a path to a RoomObject that will address the next Desire
+    /// Goes through all possible paths and picks the one with the lowest score to address the next desire.
     /// </summary>
-    private void makeNextPath()
+    private void pickNextPath()
     {
-        if (roomPathMap.Count == 0) return;
-        
+        if (roomPathMap.Count == 0 && IPpathMap.Count == 0) return;
+
         float lowestScore = float.MaxValue;
         int IPidx = -1;
-        RoomObject roomObj = null;
+        RoomObject targetObj = null;
+        bool useIPmap = false;
         //get the score for each interaction point to determine the final target
         foreach (RoomObject obj in objectsToTarget)
         {
-            float baseScore = roomPathMap[obj.GetRoom()].GetPathLength();
-            for (int i = 0; i < obj.interactionPoints.Count; i++)
+            Room room = obj.GetRoom();
+            //The camper is not in the same room as this object
+            if (roomPathMap.ContainsKey(room))
             {
-                InteractionPoint ip = obj.interactionPoints[i];
-                float score = baseScore + ip.GetIPScore();
-
-                if (score < lowestScore)
+                if (getLowestRoomPathScore(room, obj, ref lowestScore, ref IPidx, ref targetObj))
                 {
-                    IPidx = i;
-                    roomObj = obj;
-                    lowestScore = score;
+                    useIPmap = false;
+                }
+            }
+            else  //the camper is in the same room as this object
+            {
+                if (getLowestIPpathScore(obj, ref lowestScore, ref IPidx, ref targetObj))
+                {
+                    useIPmap = true;
                 }
             }
         }
-        if (roomObj == null)
+        if (targetObj == null || IPidx == -1)
         {
             SetPathStateNone();
             return; //TODO better handle
         }
-        if (roomTarget == null) roomTarget = new Room.RoomTarget(roomObj.GetRoom(), roomObj, IPidx);
-        else roomTarget.Initialize(roomObj.GetRoom(), roomObj, IPidx);
-        path = roomPathMap[roomObj.GetRoom()]; //create path to the room, not to the IP
+
+        //set up the roomTarget with the lowest scoring path
+        if (roomTarget == null) roomTarget = new Room.RoomTarget(targetObj.GetRoom(), targetObj, IPidx);
+        else roomTarget.Initialize(targetObj.GetRoom(), targetObj, IPidx);
+
+        //create a path to the room, not the IP
+        if (useIPmap)
+        {
+            roomTarget.targetingRoom = false; //targeting IP in current room
+            path = IPpathMap[targetObj.interactionPoints[IPidx]];
+        }
+        //create a path to the IP
+        else
+        {
+            roomTarget.targetingRoom = true;
+            path = roomPathMap[targetObj.GetRoom()];
+        }
 
         pathState = PathState.TravelingOnPath;
+    }
+
+    /// <summary>
+    /// For all IPs of an object in a room, calculate their travel score. Set values based on the lowest score.
+    /// </summary>
+    /// <param name="room">The room the object is in</param>
+    /// <param name="obj">The object containing the IPs</param>
+    /// <param name="lowestScore">Outputting the lowest score</param>
+    /// <param name="IPidx">Outputting the IP index of the IP with the lowest score on the obj</param>
+    /// <param name="targetObj">Outputting the Room Object with the lowest score</param>
+    /// <returns>True if a room path has the lowest score. Flase otherwise.</returns>
+    private bool getLowestRoomPathScore(Room room, RoomObject obj, ref float lowestScore, ref int IPidx, ref RoomObject targetObj)
+    {
+        //get the path size from the camper to the room's entrance
+        float baseScore = roomPathMap[room].GetPathLength();
+        bool useRoomMap = false;
+        for (int i = 0; i < obj.interactionPoints.Count; i++)
+        {
+            //for each interaction point, get the path length from the IP to the room entrance + wait time
+            InteractionPoint ip = obj.interactionPoints[i];
+            float score = baseScore + ip.GetIPScore();
+
+            if (score < lowestScore)
+            {
+                useRoomMap = true;
+                IPidx = i;
+                targetObj = obj;
+                lowestScore = score;
+            }
+        }
+        return useRoomMap;
+    }
+
+    /// <summary>
+    /// For all IPs of an object, calculate their travel score. Set values based on the lowest score.
+    /// We assume the camper is already in the same room as this Room Object.
+    /// </summary>
+    /// <param name="obj">The Room Object</param>
+    /// <param name="lowestScore">Outputting the lowest score so far</param>
+    /// <param name="IPidx">Outputting the IP index of the IP with the lowest score</param>
+    /// <param name="targetObj">Outputting the Room Object with the lowest score</param>
+    /// <returns>True if an IP of a room the camper is alreayd in has the lowest score</returns>
+    private bool getLowestIPpathScore(RoomObject obj, ref float lowestScore, ref int IPidx, ref RoomObject targetObj)
+    {
+        bool useIPmap = false;
+        for (int i = 0; i < obj.interactionPoints.Count; i++)
+        {
+            //we expect that we have calculated a path to each Interaction Point
+            InteractionPoint IP = obj.interactionPoints[i];
+            if (!IPpathMap.ContainsKey(IP)) continue;
+
+            //score is the length of the path to the IP + the wait time of that IP
+            float score = IPpathMap[IP].GetPathLength();
+            score += IP.GetWaitScore();
+
+            if (score < lowestScore)
+            {
+                useIPmap = true;
+                IPidx = i;
+                targetObj = obj;
+                lowestScore = score;
+            }
+        }
+        return useIPmap;
     }
 
     /// <summary>
@@ -447,10 +570,30 @@ public class Camper : PathFollower
         //call this first to start clean up old path info before making new one
         clearPathfindingData();
 
+        //Get next desire type to address
         DesireType desireType = getDesireTypeToAddress();
+
+        //Get objects that can address this desire type
         objectsToTarget = getRoomObjectsToTarget(desireType);
+
+        //Get the rooms that house those objects
         List<Room> roomsToTarget = RoomObject.GetRoomsOfRoomObjects(objectsToTarget);
-        pathMan.GetPathsToRooms(this, roomsToTarget);
+        Room currentRoom = roomMan.GetRoomWithPoint(Controls.GetPosAsVector3Int(transform));
+        List<RoomObject> objectsToTargetInCurrentRoom = new List<RoomObject>();
+
+        //If we are already in one of the rooms with those objects, remove them from the room list,
+        //and add the object to the object list
+        if (currentRoom != null && roomsToTarget.Contains(currentRoom))
+        {
+            roomsToTarget.Remove(currentRoom);
+            foreach (RoomObject obj in objectsToTarget)
+            {
+                if (obj.GetRoom() == currentRoom) objectsToTargetInCurrentRoom.Add(obj);
+            }
+        }
+
+        //Create paths to other rooms and to the objects in the current room
+        pathMan.GetPathsToRoomsAndObjects(this, roomsToTarget, objectsToTargetInCurrentRoom);
 
         pathState = PathState.WaitingForPath;
     }
@@ -487,6 +630,7 @@ public class Camper : PathFollower
     /// <returns>The Desire that should next be addressed</returns>
     private Desire getDesireToAddress(Desire[] desireArr)
     {
+        return bathroom;
         int largestIdx = -1;
         float largestVal = 0;
         bool wanted = false, needed = false;
@@ -536,10 +680,11 @@ public class Camper : PathFollower
         }
     }
 
-    public void SetRoomPathMap(Dictionary<Room, Path> _roomPathMap)
+    public void SetPathMaps(Dictionary<Room, Path> _roomPathMap, Dictionary<InteractionPoint, Path> _IPpathMap)
     {
         roomPathMap = _roomPathMap;
-        if (roomPathMap.Count == 0)
+        IPpathMap = _IPpathMap;
+        if (roomPathMap.Count == 0 && IPpathMap.Count == 0)
         {
             Debug.Log("Could not make paths");
             SetPathStateNone();
@@ -554,6 +699,14 @@ public class Camper : PathFollower
 
     public void CreatePathToTargetedInteractionPoint()
     {
+        //clear out so other IPs are not inadvertently targeted
+        clearPathMaps();
+
+        if (roomTarget != null && !roomTarget.GetInteractionPoint().Lock(this))
+        {
+            return;
+        }
+
         Vector3 start = transform.position;
         Vector3 end = roomTarget.GetInteractionPoint().GetEntryPointLocation();
         CreatePath(start, end);

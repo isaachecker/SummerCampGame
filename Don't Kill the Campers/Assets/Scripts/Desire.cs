@@ -88,6 +88,11 @@ public class Desire
         value = 0;
     }
 
+    /// <summary>
+    /// Creates a list of random ancillary desires
+    /// </summary>
+    /// <param name="numDesires">The number of desires to put in the list</param>
+    /// <returns>A list of random ancillary desires</returns>
     public static List<DesireType> GetRandomAncDesireTypes(int numDesires)
     {
         List<DesireType> types = new List<DesireType>();

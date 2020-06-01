@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5091583980137449103}
   - component: {fileID: 8730490138437881528}
   m_Layer: 0
-  m_Name: ToiletPrefab 1 1
+  m_Name: ToiletPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -142,5 +142,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   entryOffsetFromCenter: {x: 0, y: -1}
-  defaultTimeOfInteraction: 5
+  defaultTimeOfInteraction: 15
   startTime: 0

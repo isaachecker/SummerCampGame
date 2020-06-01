@@ -70,7 +70,7 @@ public abstract class RoomObject : MonoBehaviour
     protected List<Tuple<DesireType, int>> desires;
     protected Room room;
 
-    protected static Dictionary<DesireType, List<RoomObject>> desireRoomObjectMap;
+    public static Dictionary<DesireType, List<RoomObject>> desireRoomObjectMap;
 
     protected virtual void Start()
     {
@@ -78,6 +78,7 @@ public abstract class RoomObject : MonoBehaviour
         {
             desireRoomObjectMap = new Dictionary<DesireType, List<RoomObject>>();
         }
+        //Implementing object must always populate desires before calling base.Start
         for (int i = 0; i < desires.Count; i++)
         {
             DesireType desireType = desires[i].Item1;
@@ -121,7 +122,10 @@ public abstract class RoomObject : MonoBehaviour
         for (int i = 0; i < desires.Count; i++)
         {
             DesireType desireType = desires[i].Item1;
-            if (desireRoomObjectMap[desireType].Contains(this)) desireRoomObjectMap[desireType].Remove(this);
+            if (desireRoomObjectMap[desireType].Contains(this))
+            {
+                desireRoomObjectMap[desireType].Remove(this);
+            }
         }
     }
 
@@ -150,40 +154,6 @@ public abstract class RoomObject : MonoBehaviour
             if (!IP.IsLocked()) return true;
         }
         return false;
-    }
-
-    public int LockOpenInteractionPoint()
-    {
-        for (int i = 0; i < interactionPoints.Count; i++)
-        {
-            InteractionPoint IP = interactionPoints[i];
-            if (!IP.IsLocked() && IP.Lock())
-            {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    public int LockOpenInteractionPoint(ref Vector3 entryPosition)
-    {
-        int i;
-        for (i = 0; i < interactionPoints.Count; i++)
-        {
-            InteractionPoint IP = interactionPoints[i];
-            if (!IP.IsLocked() && IP.Lock())
-            {
-                break;
-            }
-        }
-        entryPosition = GetInteractionPointEntryLocation(i);
-        return i >= 0 ? i : -1;
-    }
-
-    public bool UnlockInteractionPoint(int index)
-    {
-        if (index >= interactionPoints.Count) return false;
-        return interactionPoints[index].Unlock();
     }
 
     public Vector3 GetInteractionPointEntryLocation(int index)

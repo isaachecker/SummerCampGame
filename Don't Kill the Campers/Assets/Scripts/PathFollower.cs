@@ -116,6 +116,7 @@ public abstract class PathFollower : MonoBehaviour
     protected virtual void ContinueArrived() { }
     protected virtual void EndArrived() { }
 
+    //Idle
     protected virtual void StartIdle() { }
     protected virtual void ContinueIdle() { }
     protected virtual void EndIdle() { }
@@ -186,6 +187,10 @@ public abstract class PathFollower : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Called when something causes a path to be unable to generate.
+    /// Sets pathState to None.
+    /// </summary>
     public void CouldNotSetTarget()
     {
         Debug.Log("Could not find or create path.");
