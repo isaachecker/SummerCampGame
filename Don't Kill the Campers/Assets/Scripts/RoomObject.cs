@@ -8,7 +8,8 @@ public enum RoomObjectType
     none,
     bed,
     toilet,
-    trunk
+    trunk,
+    shower
 }
 
 public abstract class RoomObject : MonoBehaviour
@@ -22,6 +23,7 @@ public abstract class RoomObject : MonoBehaviour
             case RoomObjectType.bed: return Bed.SGetAllowedRoomTypes();
             case RoomObjectType.toilet: return Toilet.SGetAllowedRoomTypes();
             case RoomObjectType.trunk: return Trunk.GetAllowedRoomTypesSub();
+            case RoomObjectType.shower: return Shower.SGetAllowedRoomTypes();
         }
         return new List<Room.Type>();
     }
@@ -37,6 +39,7 @@ public abstract class RoomObject : MonoBehaviour
         {
             case RoomObjectType.bed: return Bed.SGetObjectDesireImpact();
             case RoomObjectType.toilet: return Toilet.SGetObjectDesireImpact();
+            case RoomObjectType.shower: return Shower.SGetObjectDesireImpact();
         }
         return new List<Tuple<DesireType, int>>();
     }
@@ -54,6 +57,11 @@ public abstract class RoomObject : MonoBehaviour
                 return new List<RoomObjectType>
             {
                 RoomObjectType.toilet
+            };
+            case DesireType.bathe:
+                return new List<RoomObjectType>
+            {
+                RoomObjectType.shower
             };
         }
         return new List<RoomObjectType>();
@@ -132,7 +140,10 @@ public abstract class RoomObject : MonoBehaviour
     public static List<RoomObject> GetRoomObjectsForDesireType(DesireType desireType)
     {
         if (desireRoomObjectMap == null) return new List<RoomObject>();
-        else if (desireRoomObjectMap[desireType] == null) return new List<RoomObject>();
+        else if (!desireRoomObjectMap.ContainsKey(desireType) || desireRoomObjectMap[desireType].Count == 0)
+        {
+            return new List<RoomObject>();
+        }
         return desireRoomObjectMap[desireType];
     }
 

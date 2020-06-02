@@ -64,6 +64,7 @@ public class RoomEditor : MonoBehaviour
     public Bed bedPrefab;
     public Trunk trunkPrefab;
     public Toilet toiletPrefab;
+    public Shower showerPrefab;
 
     private Tilemap _tilemapInst, tilemapColl;
     private Vector3Int clickPos, curMousePos, lastMousePos;
@@ -279,6 +280,7 @@ public class RoomEditor : MonoBehaviour
         else if (room.GetType() == typeof(Bathhouse))
         {
             if (Input.GetKeyDown(KeyCode.T)) selectedObj = toiletPrefab;
+            else if (Input.GetKeyDown(KeyCode.S)) selectedObj = showerPrefab;
         }
         return selectedObj != null;
     }

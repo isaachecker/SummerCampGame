@@ -10,7 +10,7 @@ public class Room
         public Room room;
         public RoomObject obj;
         public int objectInteractionIndex;
-        private bool isCleared;
+        public bool isCleared { get; private set; }
 
         public RoomTarget(Room _room, RoomObject _obj, int OII)
         {

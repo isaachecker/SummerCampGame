@@ -10,9 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 7741198006560996690}
   - component: {fileID: 5091583980137449103}
-  - component: {fileID: 8730490138437881528}
+  - component: {fileID: 7782474078064158027}
   m_Layer: 0
-  m_Name: ToiletPrefab
+  m_Name: ShowerPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -72,7 +72,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 2
-  m_Sprite: {fileID: 2253755038928719498, guid: 7f49ea7c7dad64b1380a0320ce049193,
+  m_Sprite: {fileID: -731147223686028338, guid: 7f49ea7c7dad64b1380a0320ce049193,
     type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
@@ -84,7 +84,7 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &8730490138437881528
+--- !u!114 &7782474078064158027
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -93,11 +93,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 2245676010092982249}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5eeb44d40008b412994cbc2e5a40b688, type: 3}
+  m_Script: {fileID: 11500000, guid: 446dc80e8f9c54e0195618bf9145683b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  toCamperState: 3
-  type: 0
+  toCamperState: 4
+  type: 4
 --- !u!1 &2280045513134448969
 GameObject:
   m_ObjectHideFlags: 0
@@ -141,7 +141,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2cb9874837694d929bd06c68d9f8be2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  entryOffsetFromCenter: {x: 0, y: -1}
-  defaultTimeOfInteraction: 8
+  entryOffsetFromCenter: {x: 1, y: 0}
+  defaultTimeOfInteraction: 12
   startTime: 0
   timeRemainingScoreMultiplier: 6

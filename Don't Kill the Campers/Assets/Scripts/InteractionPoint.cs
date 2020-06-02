@@ -64,8 +64,8 @@ public class InteractionPoint : MonoBehaviour
         if (isLocked == camper) return true;
         if (isLocked != null) return false;
         isLocked = camper;
+        RemoveCamperEnRoute(camper);
 
-        //TODO make all campers enroute reconsider their life choices
         recalculateEnRouteCamperPaths();
 
         return true;
@@ -184,7 +184,8 @@ public class InteractionPoint : MonoBehaviour
     public void QueueCamper(Camper camper)
     {
         campersQueued.Enqueue(camper);
-        //TODO make all campers enroute reconsider their life choices
+
+        recalculateEnRouteCamperPaths();
     }
 
     /// <summary>

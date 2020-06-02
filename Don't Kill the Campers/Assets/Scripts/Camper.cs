@@ -9,7 +9,8 @@ public enum CamperState
     None,
     Sleeping,
     Changing,
-    Toilet
+    Toilet,
+    Showering
 }
 
 public class Camper : PathFollower
@@ -25,10 +26,10 @@ public class Camper : PathFollower
     private void initializeCoreDesires()
     {
         eat = new Desire(DesireType.eat, 1);
-        bathe = new Desire(DesireType.bathe, 1);
+        bathe = new Desire(DesireType.bathe, 2);
         drink = new Desire(DesireType.drink, 1);
         health = new Desire(DesireType.health, 1);
-        bathroom = new Desire(DesireType.bathroom, 1);
+        bathroom = new Desire(DesireType.bathroom, 2.1f);
         
         coreDesires = new Desire[numCoreDesires] { eat, drink, health, bathe, bathroom };
     }
@@ -38,7 +39,6 @@ public class Camper : PathFollower
         {
             coreDesires[i].IncrementAndDecrement();
         }
-        //Debug.Log(bathroom.value);
     }
     #endregion
 
@@ -137,6 +137,7 @@ public class Camper : PathFollower
                 case CamperState.Sleeping:
                 case CamperState.Changing:
                 case CamperState.Toilet:
+                case CamperState.Showering:
                     break;
             }
         }
@@ -218,6 +219,9 @@ public class Camper : PathFollower
                 break;
             case CamperState.Toilet:
                 ToiletState();
+                break;
+            case CamperState.Showering:
+                ShoweringState();
                 break;
         }
     }
@@ -324,7 +328,60 @@ public class Camper : PathFollower
         {
             actionState = ActionState.None;
             camperState = CamperState.None;
-            SetPathStateNone();
+            startMakeNextPath(true);
+        }
+    }
+    #endregion
+
+    #region Showering
+    private void ShoweringState()
+    {
+        switch (actionState)
+        {
+            case ActionState.PreAction:
+                PreShoweringState();
+                break;
+            case ActionState.MidAction:
+                MidShoweringState();
+                break;
+            case ActionState.PostAction:
+                PostShoweringState();
+                break;
+        }
+    }
+
+    private void PreShoweringState()
+    {
+        Vector3 objInteractionPos = roomTarget.obj.GetInteractionPointLocation(roomTarget.objectInteractionIndex);
+        Vector3 direction = (objInteractionPos - transform.position).normalized;
+        transform.position += (direction * 3 * Time.deltaTime);
+        Vector2 delta = objInteractionPos - transform.position;
+        if (delta.magnitude < 0.1f)
+        {
+            actionState = ActionState.MidAction;
+        }
+    }
+
+    private void MidShoweringState()
+    {
+        if (InteractionTimeIsComplete())
+        {
+            actionState = ActionState.PostAction;
+        }
+    }
+
+    private void PostShoweringState()
+    {
+        //do whatever you need to get off the toilet
+        Vector3 objInteractionPos = roomTarget.obj.GetInteractionPointEntryLocation(roomTarget.objectInteractionIndex);
+        Vector3 direction = (objInteractionPos - transform.position).normalized;
+        transform.position += (direction * 3 * Time.deltaTime);
+        Vector2 delta = objInteractionPos - transform.position;
+        if (delta.magnitude < 0.1f)
+        {
+            actionState = ActionState.None;
+            camperState = CamperState.None;
+            startMakeNextPath(true);
         }
     }
     #endregion
@@ -391,7 +448,10 @@ public class Camper : PathFollower
     }
     protected override void EndUniqueAction()
     {
-        roomTarget.GetInteractionPoint().Unlock(this);
+        if (roomTarget != null && !roomTarget.isCleared && roomTarget.GetInteractionPoint().IsLocked())
+        {
+            roomTarget.GetInteractionPoint().Unlock(this);
+        }
     }
     protected override void ContinueUniqueAction() { }
     #endregion
@@ -416,6 +476,9 @@ public class Camper : PathFollower
         clearPathMaps();
     }
 
+    /// <summary>
+    /// Clears the roomPathMap and IPpathMap
+    /// </summary>
     private void clearPathMaps()
     {
         roomPathMap.Clear();
@@ -545,6 +608,9 @@ public class Camper : PathFollower
         return useIPmap;
     }
 
+    /// <summary>
+    /// Start recalculating paths to something to address the current desire type
+    /// </summary>
     public void RecalculatePotentialPaths()
     {
         startMakeNextPath(false);
@@ -603,17 +669,58 @@ public class Camper : PathFollower
         return objs;
     }
 
-    /// <summary>
-    /// Gets the next desire type that should be addressed
-    /// </summary>
-    /// <returns>The DesireType to address</returns>
     private DesireType getDesireTypeToAddress()
     {
-        Desire coreDesire = getDesireToAddress(coreDesires);
-        if (coreDesire.IsWanted()) return coreDesire.GetDesireType();
+        LinkedList<Desire> desiresSorted = getDesireSortedList();
+        LinkedListNode <Desire> desireNode = desiresSorted.First;
+        while (desireNode != null)
+        {
+            DesireType type = desireNode.Value.GetDesireType();
+            List<RoomObject> objsToTarget = getRoomObjectsToTarget(type);
+            if (objsToTarget.Count > 0) return type;
+            else
+            {
+                Debug.Log("Could not address desire: " + type.ToString());
+                desireNode = desireNode.Next;
+            }
+        }
+        return DesireType.none;
+    }
 
-        Desire ancDesire = getDesireToAddress(ancDesires);
-        return ancDesire.GetDesireType();
+    private LinkedList<Desire> getDesireSortedList()
+    {
+        LinkedList<Desire> desiresSorted = new LinkedList<Desire>();
+        foreach (Desire desire in coreDesires)
+        {
+            AddDesireToLinkedList(desire, ref desiresSorted);
+        }
+        foreach (Desire desire in ancDesires)
+        {
+            AddDesireToLinkedList(desire, ref desiresSorted);
+        }
+        return desiresSorted;
+    }
+
+    private void AddDesireToLinkedList(Desire desire, ref LinkedList<Desire> desiresSorted)
+    {
+        if (desiresSorted.Count == 0) desiresSorted.AddFirst(desire);
+        else
+        {
+            LinkedListNode<Desire> nextDesire = desiresSorted.First;
+            while (nextDesire != null)
+            {
+                if (desire.value > nextDesire.Value.value)
+                {
+                    desiresSorted.AddBefore(nextDesire, desire);
+                    break;
+                }
+                nextDesire = nextDesire.Next;
+            }
+            if (nextDesire == null)
+            {
+                desiresSorted.AddLast(desire);
+            }
+        }
     }
 
     /// <summary>
@@ -621,24 +728,26 @@ public class Camper : PathFollower
     /// </summary>
     /// <param name="desireArr">The array of desires to pick from</param>
     /// <returns>The Desire that should next be addressed</returns>
-    private Desire getDesireToAddress(Desire[] desireArr)
+    private Desire getDesireToAddress(Desire[] desireArr, List<DesireType> doNotSelect)
     {
-        return bathroom;
         int largestIdx = -1;
         float largestVal = 0;
         bool wanted = false, needed = false;
         for (int i = 0; i < desireArr.Length; i++)
         {
-            if (needed && !desireArr[i].IsNeeded()) continue;
-            else if (wanted && !desireArr[i].IsWanted()) continue;
-            wanted = desireArr[i].IsWanted();
-            needed = desireArr[i].IsNeeded();
-            if (desireArr[i].value >= largestVal)
+            Desire desire = desireArr[i];
+            if (doNotSelect.Contains(desire.GetDesireType())) continue;
+            else if (needed && !desire.IsNeeded()) continue;
+            else if (wanted && !desire.IsWanted()) continue;
+            wanted = desire.IsWanted();
+            needed = desire.IsNeeded();
+            if (desire.value >= largestVal)
             {
                 largestIdx = i;
-                largestVal = desireArr[i].value;
+                largestVal = desire.value;
             }
         }
+        if (largestIdx == -1) return null;
         return desireArr[largestIdx];
     }
 

@@ -28,6 +28,11 @@ public class PathManager : MonoBehaviour
         /// <param name="_objects">The _objects to find paths to</param>
         public void Inizialize(Camper _camper, List<Room> _rooms, List<RoomObject> _objects)
         {
+            if (_rooms.Count == 0 && _objects.Count == 0)
+            {
+                Debug.LogError("No rooms or objects to make paths to");
+            }
+
             camper = _camper;
             startPoint = camper.transform.position;
             if (simpPF2D == null) simpPF2D = GameObject.Find("Grid").GetComponent<SimplePathFinding2D>();

@@ -1034,6 +1034,8 @@ MonoBehaviour:
     type: 3}
   toiletPrefab: {fileID: 8730490138437881528, guid: 0702ca3a34666487aa53d74493d63736,
     type: 3}
+  showerPrefab: {fileID: 7782474078064158027, guid: 4bf1b060d8bfe4ef1a63492e3611eecd,
+    type: 3}
 --- !u!4 &1620643265
 Transform:
   m_ObjectHideFlags: 0
